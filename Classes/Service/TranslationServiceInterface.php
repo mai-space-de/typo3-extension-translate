@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Service;
+namespace Maispace\MaiTranslate\Service;
 
 interface TranslationServiceInterface
 {

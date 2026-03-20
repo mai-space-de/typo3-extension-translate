@@ -4,13 +4,13 @@ services:
     autoconfigure: true
     public: false
 
-  Maispace\Translate\:
+  Maispace\MaiTranslate\:
     resource: '../Classes/*'
 
-  Maispace\Translate\Controller\TranslateController:
+  Maispace\MaiTranslate\Controller\TranslateController:
     public: true
 
-  Maispace\Translate\EventListener\TranslateButtonEventListener:
+  Maispace\MaiTranslate\EventListener\TranslateButtonEventListener:
     tags:
       - name: event.listener
         identifier: 'maispace-translate/modify-button-bar'

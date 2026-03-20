@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Service;
+namespace Maispace\MaiTranslate\Service;
 
+use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationExtensionNotConfiguredException;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Http\RequestFactory;
 
@@ -22,9 +23,14 @@ final class OpenAiTranslationService implements TranslationServiceInterface
         ExtensionConfiguration $extensionConfiguration,
         private readonly RequestFactory $requestFactory,
     ) {
-        $config = $extensionConfiguration->get('translate');
-        $this->apiKey = (string)($config['openAiApiKey'] ?? '');
-        $this->model = (string)($config['openAiModel'] ?? 'gpt-4o-mini');
+        try {
+            $config = $extensionConfiguration->get('translate');
+            $this->apiKey = (string)($config['openAiApiKey'] ?? '');
+            $this->model = (string)($config['openAiModel'] ?? 'gpt-4o-mini');
+        } catch (ExtensionConfigurationExtensionNotConfiguredException) {
+            $this->apiKey = '';
+            $this->model = 'gpt-4o-mini';
+        }
     }
 
     public function getName(): string

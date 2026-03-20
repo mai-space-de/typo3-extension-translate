@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Tests\Unit\Loader;
+namespace Maispace\MaiTranslate\Tests\Unit\Loader;
 
-use Maispace\Translate\Loader\TranslatableTablesLoader;
+use Maispace\MaiTranslate\Loader\TranslatableTablesLoader;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;

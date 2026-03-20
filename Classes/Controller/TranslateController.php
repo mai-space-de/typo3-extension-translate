@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Controller;
+namespace Maispace\MaiTranslate\Controller;
 
-use Maispace\Translate\Loader\TranslatableTablesLoader;
-use Maispace\Translate\Service\TranslationServiceFactory;
+use Maispace\MaiTranslate\Loader\TranslatableTablesLoader;
+use Maispace\MaiTranslate\Service\TranslationServiceFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Database\Connection;

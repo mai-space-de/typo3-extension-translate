@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Loader;
+namespace Maispace\MaiTranslate\Loader;
 
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Service;
+namespace Maispace\MaiTranslate\Service;
 
 /**
  * Factory that resolves the requested translation service by its provider name.

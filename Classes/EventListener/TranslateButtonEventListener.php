@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\EventListener;
+namespace Maispace\MaiTranslate\EventListener;
 
-use Maispace\Translate\Loader\TranslatableTablesLoader;
-use Maispace\Translate\Service\TranslationServiceFactory;
+use Maispace\MaiTranslate\Loader\TranslatableTablesLoader;
+use Maispace\MaiTranslate\Service\TranslationServiceFactory;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\Components\ModifyButtonBarEvent;

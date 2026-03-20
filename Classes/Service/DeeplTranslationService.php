@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Maispace\Translate\Service;
+namespace Maispace\MaiTranslate\Service;
 
+use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationExtensionNotConfiguredException;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Http\RequestFactory;
 
@@ -21,8 +22,12 @@ final class DeeplTranslationService implements TranslationServiceInterface
         ExtensionConfiguration $extensionConfiguration,
         private readonly RequestFactory $requestFactory,
     ) {
-        $config = $extensionConfiguration->get('translate');
-        $this->apiKey = (string)($config['deeplApiKey'] ?? '');
+        try {
+            $config = $extensionConfiguration->get('translate');
+            $this->apiKey = (string)($config['deeplApiKey'] ?? '');
+        } catch (ExtensionConfigurationExtensionNotConfiguredException) {
+            $this->apiKey = '';
+        }
     }
 
     public function getName(): string
