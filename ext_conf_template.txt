@@ -1,0 +1,14 @@
+# cat=basic/enable; type=string; label=DeepL API Key: Your DeepL API key (use ':fx' suffix for free tier)
+deeplApiKey =
+
+# cat=basic/enable; type=string; label=OpenAI API Key: Your OpenAI API key
+openAiApiKey =
+
+# cat=basic/enable; type=string; label=OpenAI Model: The OpenAI model to use for translation (default: gpt-4o-mini)
+openAiModel = gpt-4o-mini
+
+# cat=basic/enable; type=string; label=Default Provider: Default translation provider (deepl or openai)
+defaultProvider = deepl
+
+# cat=basic/enable; type=string; label=Default Source Language: Default source language code (leave empty for auto-detection)
+defaultSourceLanguage =
