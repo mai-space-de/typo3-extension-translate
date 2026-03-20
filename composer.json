@@ -1,0 +1,28 @@
+{
+    "name": "maispace/translate",
+    "type": "typo3-cms-extension",
+    "description": "Translation extension for Maispace Projects using DeepL or OpenAI",
+    "homepage": "https://www.maispace.de",
+    "license": "GPL-2.0-or-later",
+    "authors": [{
+        "name": "Joel Maximilian Mai",
+        "email": "joel@maispace.de",
+        "role": "Lead Developer"
+    }],
+    "require": {
+        "typo3/cms-core": "^13.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Maispace\\Translate\\": "Classes/"
+        }
+    },
+    "extra": {
+        "typo3/cms": {
+            "extension-key": "translate"
+        },
+        "branch-alias": {
+            "dev-main": "13.0.x-dev"
+        }
+    }
+}
