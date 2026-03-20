@@ -16,8 +16,9 @@ use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Adds a "Translate" button to the backend edit-form button bar for pages
- * and content elements (tt_content), including all maispace elements.
+ * Adds a "Translate" button to the backend edit-form button bar for pages,
+ * content elements (tt_content), file metadata (sys_file_metadata), and file
+ * references (sys_file_reference), including all maispace elements.
  *
  * The button is only rendered when at least one translation provider is
  * properly configured via the extension settings.
@@ -25,7 +26,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 final class TranslateButtonEventListener
 {
     /** Tables for which the translate button is shown. */
-    private const SUPPORTED_TABLES = ['pages', 'tt_content'];
+    private const SUPPORTED_TABLES = ['pages', 'tt_content', 'sys_file_metadata', 'sys_file_reference'];
 
     public function __construct(
         private readonly IconFactory $iconFactory,

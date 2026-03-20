@@ -15,12 +15,15 @@ use TYPO3\CMS\Core\Http\JsonResponse;
  * Backend AJAX controller that translates a single record's text fields
  * using the configured translation provider.
  *
- * Supported tables: pages, tt_content (all maispace elements).
+ * Supported tables: pages, tt_content (all maispace elements),
+ * sys_file_metadata, sys_file_reference.
  *
  * Translatable fields per table:
- *   pages      – title, subtitle, nav_title, abstract, description, keywords,
- *                seo_title, og_title, og_description, twitter_title, twitter_description
- *   tt_content – header, subheader, bodytext, header_link
+ *   pages               – title, subtitle, nav_title, abstract, description, keywords,
+ *                         seo_title, og_title, og_description, twitter_title, twitter_description
+ *   tt_content          – header, subheader, bodytext, header_link
+ *   sys_file_metadata   – title, description, caption, alternative
+ *   sys_file_reference  – title, description, alternative, link
  */
 final class TranslateController
 {
@@ -47,6 +50,18 @@ final class TranslateController
             'og_description',
             'twitter_title',
             'twitter_description',
+        ],
+        'sys_file_metadata' => [
+            'title',
+            'description',
+            'caption',
+            'alternative',
+        ],
+        'sys_file_reference' => [
+            'title',
+            'description',
+            'alternative',
+            'link',
         ],
     ];
 

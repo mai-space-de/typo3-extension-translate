@@ -4,7 +4,7 @@ TYPO3 extension that adds a **"Translate"** button to the backend edit-form butt
 
 ## Features
 
-* Translate button appears on every **page** and **content element** edit form in the TYPO3 backend.
+* Translate button appears on every **page**, **content element**, **file metadata** (`sys_file_metadata`), and **file reference** (`sys_file_reference`) edit form in the TYPO3 backend.
 * Supports all **maispace elements** ([typo3-extension-elements](https://github.com/mai-space-de/typo3-extension-elements)):
   `element-headline`, `element-text`, `element-html`, `element-table`, `element-image`, `element-video`, `element-file`.
 * Two built-in translation providers:
@@ -69,9 +69,27 @@ Open **Admin Tools → Settings → Extension Configuration → translate** and 
 | `twitter_title` | Twitter card title |
 | `twitter_description` | Twitter card description |
 
+### sys_file_metadata
+
+| Field | Description |
+|---|---|
+| `title` | File title |
+| `description` | File description |
+| `caption` | Caption |
+| `alternative` | Alternative text |
+
+### sys_file_reference
+
+| Field | Description |
+|---|---|
+| `title` | Override title for this reference |
+| `description` | Override description for this reference |
+| `alternative` | Override alternative text for this reference |
+| `link` | Link field |
+
 ## Usage
 
-1. Open any page or content element in the TYPO3 backend.
+1. Open any page, content element, file metadata, or file reference record in the TYPO3 backend.
 2. Click the **Translate** button (globe icon) in the button bar.
 3. Select the **provider** and **target language** in the modal dialog.
 4. Optionally choose a source language (leave empty for auto-detect).
