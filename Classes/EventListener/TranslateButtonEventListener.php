@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maispace\Translate\EventListener;
 
+use Maispace\Translate\Loader\TranslatableTablesLoader;
 use Maispace\Translate\Service\TranslationServiceFactory;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
@@ -16,23 +17,21 @@ use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Adds a "Translate" button to the backend edit-form button bar for pages,
- * content elements (tt_content), file metadata (sys_file_metadata), and file
- * references (sys_file_reference), including all maispace elements.
+ * Adds a "Translate" button to the backend edit-form button bar for any table
+ * that is registered via Configuration/TranslatableTables.php in an active
+ * TYPO3 package.
  *
  * The button is only rendered when at least one translation provider is
  * properly configured via the extension settings.
  */
 final class TranslateButtonEventListener
 {
-    /** Tables for which the translate button is shown. */
-    private const SUPPORTED_TABLES = ['pages', 'tt_content', 'sys_file_metadata', 'sys_file_reference'];
-
     public function __construct(
         private readonly IconFactory $iconFactory,
         private readonly UriBuilder $uriBuilder,
         private readonly TranslationServiceFactory $translationServiceFactory,
         private readonly ExtensionConfiguration $extensionConfiguration,
+        private readonly TranslatableTablesLoader $translatableTablesLoader,
     ) {}
 
     public function __invoke(ModifyButtonBarEvent $event): void
@@ -57,7 +56,8 @@ final class TranslateButtonEventListener
 
         $table = (string)key($editConf);
 
-        if (!in_array($table, self::SUPPORTED_TABLES, true)) {
+        $supportedTables = array_keys($this->translatableTablesLoader->getTranslatableTables());
+        if (!in_array($table, $supportedTables, true)) {
             return;
         }
 
@@ -114,3 +114,4 @@ final class TranslateButtonEventListener
         return $GLOBALS['LANG'] ?? null;
     }
 }
+

@@ -13,6 +13,7 @@ TYPO3 extension that adds a **"Translate"** button to the backend edit-form butt
 * Button is only displayed when at least one provider is configured.
 * Translated values are written back directly into the open edit form – no page reload required.
 * Uses the same **button bar event approach** as [typo3-extension-base](https://github.com/mai-space-de/typo3-extension-base).
+* **Extensible** – any active extension or site package can register additional tables and fields via `Configuration/TranslatableTables.php`.
 
 ## Requirements
 
@@ -42,7 +43,32 @@ Open **Admin Tools → Settings → Extension Configuration → translate** and 
 | `defaultProvider` | Default provider shown in the modal (`deepl` or `openai`) |
 | `defaultSourceLanguage` | Default source language code (leave empty for auto-detect) |
 
+## Extending translatable tables
+
+Any active TYPO3 extension or site package can register additional tables and fields by placing a `Configuration/TranslatableTables.php` file that returns an array keyed by TCA table name:
+
+```php
+// EXT:my_extension/Configuration/TranslatableTables.php
+return [
+    // Register a completely new table
+    'tx_myext_domain_model_product' => [
+        'name',
+        'description',
+        'teaser',
+    ],
+
+    // Add extra fields to an existing table
+    'tt_content' => [
+        'tx_myext_custom_field',
+    ],
+];
+```
+
+The extension discovers these files from all active packages, merges their field lists (de-duplicating where the same field is declared multiple times), and caches the result in the `translate_tables` system cache. The cache is invalidated automatically when **System caches** are cleared.
+
 ## Translatable fields
+
+The built-in configuration covers the following tables and fields.
 
 ### tt_content (all CTypes, including maispace elements)
 

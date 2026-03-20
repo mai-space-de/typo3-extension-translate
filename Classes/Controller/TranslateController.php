@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Maispace\Translate\Controller;
 
+use Maispace\Translate\Loader\TranslatableTablesLoader;
 use Maispace\Translate\Service\TranslationServiceFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -15,66 +16,23 @@ use TYPO3\CMS\Core\Http\JsonResponse;
  * Backend AJAX controller that translates a single record's text fields
  * using the configured translation provider.
  *
- * Supported tables: pages, tt_content (all maispace elements),
- * sys_file_metadata, sys_file_reference.
- *
- * Translatable fields per table:
- *   pages               – title, subtitle, nav_title, abstract, description, keywords,
- *                         seo_title, og_title, og_description, twitter_title, twitter_description
- *   tt_content          – header, subheader, bodytext, header_link
- *   sys_file_metadata   – title, description, caption, alternative
- *   sys_file_reference  – title, description, alternative, link
+ * The set of supported tables and fields is determined at runtime by
+ * TranslatableTablesLoader, which merges Configuration/TranslatableTables.php
+ * from every active TYPO3 package.
  */
 final class TranslateController
 {
-    /**
-     * Fields that are candidates for translation, grouped by table.
-     * Only non-empty fields that exist on the record are actually translated.
-     */
-    private const TRANSLATABLE_FIELDS = [
-        'tt_content' => [
-            'header',
-            'subheader',
-            'bodytext',
-            'header_link',
-        ],
-        'pages' => [
-            'title',
-            'subtitle',
-            'nav_title',
-            'abstract',
-            'description',
-            'keywords',
-            'seo_title',
-            'og_title',
-            'og_description',
-            'twitter_title',
-            'twitter_description',
-        ],
-        'sys_file_metadata' => [
-            'title',
-            'description',
-            'caption',
-            'alternative',
-        ],
-        'sys_file_reference' => [
-            'title',
-            'description',
-            'alternative',
-            'link',
-        ],
-    ];
-
     public function __construct(
         private readonly TranslationServiceFactory $translationServiceFactory,
         private readonly ConnectionPool $connectionPool,
+        private readonly TranslatableTablesLoader $translatableTablesLoader,
     ) {}
 
     /**
      * Translates text fields of a record and returns the translated values.
      *
      * Query parameters:
-     *   table          – 'pages' or 'tt_content'
+     *   table          – TCA table name (must be registered in TranslatableTables.php)
      *   uid            – numeric record UID
      *   targetLanguage – target language code (e.g. 'DE', 'EN', 'FR')
      *   provider       – 'deepl' (default) or 'openai'
@@ -97,7 +55,9 @@ final class TranslateController
             return new JsonResponse(['error' => 'Missing required parameters: table, uid, targetLanguage'], 400);
         }
 
-        if (!array_key_exists($table, self::TRANSLATABLE_FIELDS)) {
+        $translatableTables = $this->translatableTablesLoader->getTranslatableTables();
+
+        if (!array_key_exists($table, $translatableTables)) {
             return new JsonResponse(['error' => sprintf('Unsupported table "%s"', $table)], 400);
         }
 
@@ -116,7 +76,7 @@ final class TranslateController
             return new JsonResponse(['error' => sprintf('Provider "%s" is not configured', $provider)], 503);
         }
 
-        $fieldsToTranslate = $this->resolveFieldsToTranslate($table, $record);
+        $fieldsToTranslate = $this->resolveFieldsToTranslate($table, $record, $translatableTables);
         $translations = [];
 
         foreach ($fieldsToTranslate as $field) {
@@ -155,14 +115,15 @@ final class TranslateController
     }
 
     /**
-     * Returns the subset of translatable fields that actually exist in the record
-     * and have a non-empty value.
+     * Returns the subset of translatable fields that actually exist in the record.
      *
+     * @param array<string, list<string>> $translatableTables
      * @return string[]
      */
-    private function resolveFieldsToTranslate(string $table, array $record): array
+    private function resolveFieldsToTranslate(string $table, array $record, array $translatableTables): array
     {
-        $candidates = self::TRANSLATABLE_FIELDS[$table] ?? [];
+        $candidates = $translatableTables[$table] ?? [];
         return array_filter($candidates, static fn(string $field) => array_key_exists($field, $record));
     }
 }
+
