@@ -20,7 +20,7 @@ $EM_CONF[$_EXTKEY] = [
     'clearCacheOnLoad' => 1,
     'autoload' => [
         'psr-4' => [
-            'Maispace\\Translate\\' => 'Classes',
+            'Maispace\\MaiTranslate\\' => 'Classes',
         ],
     ],
 ];

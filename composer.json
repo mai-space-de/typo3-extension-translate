@@ -1,5 +1,5 @@
 {
-    "name": "maispace/translate",
+    "name": "maispace/mai-translate",
     "type": "typo3-cms-extension",
     "description": "Translation extension for Maispace Projects using DeepL or OpenAI",
     "homepage": "https://www.maispace.de",
@@ -22,17 +22,17 @@
     },
     "autoload": {
         "psr-4": {
-            "Maispace\\Translate\\": "Classes/"
+            "Maispace\\MaiTranslate\\": "Classes/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Maispace\\Translate\\Tests\\": "Tests/"
+            "Maispace\\MaiTranslate\\Tests\\": "Tests/"
         }
     },
     "extra": {
         "typo3/cms": {
-            "extension-key": "translate"
+            "extension-key": "mai_translate"
         },
         "branch-alias": {
             "dev-main": "13.0.x-dev"
