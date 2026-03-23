@@ -18,6 +18,7 @@
   "require-dev": {
     "armin/editorconfig-cli": "^2.1",
     "friendsofphp/php-cs-fixer": "^3.0",
+    "helmich/typo3-typoscript-lint": "^3.1",
     "phpstan/phpstan": "^2.0",
     "phpunit/phpunit": "^11.0",
     "saschaegerer/phpstan-typo3": "^2.0",
@@ -46,12 +47,14 @@
       "@check:editorconfig",
       "@check:phpcs",
       "@check:phpstan",
+      "@check:typoscript",
       "@composer validate --strict --no-check-version --no-check-all --no-check-publish"
     ],
     "lint:fix": [
       "@fix:editorconfig",
       "@fix:phpcs",
-      "@check:phpstan"
+      "@check:phpstan",
+      "@check:typoscript"
     ],
     "check:editorconfig": "ec -unv -e vendor/",
     "fix:editorconfig": "ec -unvf -e vendor/",
@@ -59,6 +62,7 @@
     "fix:phpcs": "PHP_CS_FIXER_IGNORE_ENV=1 php-cs-fixer fix --config .php-cs-fixer.php --ansi",
     "check:phpstan": "phpstan analyse --no-progress",
     "check:phpstan:baseline": "phpstan analyse --no-progress --generate-baseline=phpstan-baseline.neon",
+    "check:typoscript": "typoscript-lint --fail-on-warnings -c typoscript-lint.yml Configuration/",
     "test": "phpunit --configuration phpunit.xml.dist",
     "test:unit": "phpunit --configuration phpunit.xml.dist --testsuite Unit"
   },
