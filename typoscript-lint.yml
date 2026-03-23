@@ -1,0 +1,26 @@
+paths:
+  - Configuration
+
+filePatterns:
+  - "*.typoscript"
+  - "*.ts"
+
+linting:
+  RepeatingRValue:
+    disabled: false
+  DeadCode:
+    disabled: false
+  EmptySection:
+    disabled: false
+  NestingConsistency:
+    disabled: false
+  OperatorWhitespace:
+    disabled: false
+  OperatorWhitespaceSniff:
+    disabled: false
+  IndentationSniff:
+    disabled: false
+    indentPerLevel: 2
+    indentConditions: false
+  DeadCodeSniff:
+    disabled: false

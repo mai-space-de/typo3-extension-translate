@@ -6,8 +6,8 @@
 maispace/translate — TYPO3 Translator
 =====================================
 
-:Extension key: translate
-:Package name: maispace/translate
+:Extension key: mai_translate
+:Package name: maispace/mai-translate
 :Version: |release|
 :Language: en
 :Author: Joel Maximilian Mai

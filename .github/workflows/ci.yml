@@ -131,3 +131,33 @@ jobs:
 
       - name: Check code style
         run: composer check:phpcs
+
+  # ---------------------------------------------------------------------------
+  # TypoScript lint
+  # ---------------------------------------------------------------------------
+  typoscript-lint:
+    name: TypoScript lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: >
+          composer install
+          --prefer-dist
+          --no-progress
+          --no-interaction
+        env:
+          COMPOSER_ROOT_VERSION: "1.0.0"
+
+      - name: Run TypoScript lint
+        run: composer check:typoscript
