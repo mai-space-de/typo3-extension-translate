@@ -3,7 +3,7 @@
 .. _start:
 
 =====================================
-maispace/translate — TYPO3 Translator
+maispace/mai-translate — TYPO3 Translator
 =====================================
 
 :Extension key: mai_translate
@@ -14,7 +14,7 @@ maispace/translate — TYPO3 Translator
 :License: This document is published under the `Open Publication License
           <https://www.opencontent.org/openpub/>`__.
 
-**maispace/translate** is a TYPO3 13.4+ extension that adds a one-click
+**maispace/mai-translate** is a TYPO3 13.4+ extension that adds a one-click
 **Translate** button to the backend edit-form button bar for pages, content
 elements, file metadata, and file references. Translation is delegated to
 either the `DeepL API`_ or the `OpenAI API`_.
