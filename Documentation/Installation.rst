@@ -16,18 +16,18 @@ Composer
 
 .. code-block:: bash
 
-   composer require maispace/translate
+   composer require maispace/mai-translate
 
 Activate the extension if not using composer-mode:
 
 .. code-block:: bash
 
-   vendor/bin/typo3 extension:activate translate
+   vendor/bin/typo3 extension:activate mai_translate
 
 Provider configuration
 ----------------------
 
-Open :guilabel:`Admin Tools → Settings → Extension Configuration → translate`
+Open :guilabel:`Admin Tools → Settings → Extension Configuration → mai_translate`
 and fill in at least one API key:
 
 .. list-table::

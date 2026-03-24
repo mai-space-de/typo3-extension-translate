@@ -22,18 +22,18 @@ TYPO3 extension that adds a **"Translate"** button to the backend edit-form butt
 ## Installation
 
 ```bash
-composer require maispace/translate
+composer require maispace/mai-translate
 ```
 
 Then activate the extension:
 
 ```bash
-vendor/bin/typo3 extension:activate translate
+vendor/bin/typo3 extension:activate mai_translate
 ```
 
 ## Configuration
 
-Open **Admin Tools → Settings → Extension Configuration → translate** and set:
+Open **Admin Tools → Settings → Extension Configuration → mai_translate** and set:
 
 | Key | Description |
 |---|---|

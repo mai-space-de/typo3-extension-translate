@@ -5,7 +5,7 @@
 Introduction
 ============
 
-**maispace/translate** adds a **Translate** button to the TYPO3 backend
+**maispace/mai-translate** adds a **Translate** button to the TYPO3 backend
 edit-form button bar. Clicking the button opens a modal dialog where editors
 choose a provider and target language. The extension then fetches the current
 record from the database, sends its translatable text fields to the selected

@@ -6,7 +6,7 @@ Configuration
 =============
 
 All configuration is managed through TYPO3 Extension Configuration
-(:guilabel:`Admin Tools → Settings → Extension Configuration → translate`).
+(:guilabel:`Admin Tools → Settings → Extension Configuration → mai_translate`).
 
 .. _ext-conf:
 

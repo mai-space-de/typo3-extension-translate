@@ -5,7 +5,7 @@
 Translatable Tables
 ===================
 
-**maispace/translate** uses a discovery mechanism to determine which TCA tables
+**maispace/mai-translate** uses a discovery mechanism to determine which TCA tables
 and fields are eligible for translation. Any active TYPO3 extension or site
 package can contribute to this list by placing a single PHP file in its
 ``Configuration/`` directory.
