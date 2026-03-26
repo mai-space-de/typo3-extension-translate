@@ -1,16 +1,16 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Tests\Unit\Service;
 
+use Maispace\MaiTranslate\Service\DeeplTranslationService;
+use Maispace\MaiTranslate\Service\OpenAiTranslationService;
 use Maispace\MaiTranslate\Service\TranslationServiceFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Maispace\MaiTranslate\Service\DeeplTranslationService;
-use Maispace\MaiTranslate\Service\OpenAiTranslationService;
 
 #[CoversClass(TranslationServiceFactory::class)]
 final class TranslationServiceFactoryTest extends TestCase

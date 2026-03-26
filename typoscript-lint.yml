@@ -2,6 +2,9 @@ filePatterns:
   - '*.tsconfig'
   - '*.typoscript'
 
+excludePatterns:
+  - vendor/
+
 sniffs:
   - class: Indentation
     parameters:

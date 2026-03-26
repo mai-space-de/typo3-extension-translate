@@ -1,5 +1,6 @@
 /vendor/
 /.phpunit.cache/
+public
 /.php-cs-fixer.cache
 /phpstan-baseline.neon
 composer.lock

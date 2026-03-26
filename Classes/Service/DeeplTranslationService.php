@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Service;
 
@@ -14,7 +14,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  * Supports both the free (api-free.deepl.com) and the pro (api.deepl.com) tiers.
  * The API key suffix ':fx' indicates a free-tier key.
  */
-final class DeeplTranslationService implements TranslationServiceInterface
+class DeeplTranslationService implements TranslationServiceInterface
 {
     private string $apiKey;
 
@@ -51,8 +51,8 @@ final class DeeplTranslationService implements TranslationServiceInterface
             : 'https://api.deepl.com/v2/translate';
 
         $params = [
-            'text' => [$text],
-            'target_lang' => strtoupper($targetLanguage),
+            'text'         => [$text],
+            'target_lang'  => strtoupper($targetLanguage),
             'tag_handling' => 'html',
         ];
 
@@ -66,20 +66,18 @@ final class DeeplTranslationService implements TranslationServiceInterface
             [
                 'headers' => [
                     'Authorization' => 'DeepL-Auth-Key ' . $this->apiKey,
-                    'Content-Type' => 'application/json',
+                    'Content-Type'  => 'application/json',
                 ],
                 'body' => json_encode($params),
             ]
         );
 
         if ($response->getStatusCode() !== 200) {
-            throw new \RuntimeException(
-                'DeepL API error: HTTP ' . $response->getStatusCode() . ' – ' . $response->getBody()->getContents(),
-                1_700_000_002
-            );
+            throw new \RuntimeException('DeepL API error: HTTP ' . $response->getStatusCode() . ' – ' . $response->getBody()->getContents(), 1_700_000_002);
         }
 
         $data = json_decode($response->getBody()->getContents(), true);
+
         return (string)($data['translations'][0]['text'] ?? '');
     }
 }

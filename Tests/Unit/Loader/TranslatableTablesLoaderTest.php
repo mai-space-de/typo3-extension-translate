@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Tests\Unit\Loader;
 
@@ -100,7 +100,7 @@ final class TranslatableTablesLoaderTest extends TestCase
     private function createTempPackageWithConfig(array $config): string
     {
         $dir = sys_get_temp_dir() . '/typo3_translate_test_' . uniqid('', true);
-        mkdir($dir . '/Configuration', 0777, true);
+        mkdir($dir . '/Configuration', 0o777, true);
         file_put_contents(
             $dir . '/Configuration/TranslatableTables.php',
             '<?php return ' . var_export($config, true) . ';'

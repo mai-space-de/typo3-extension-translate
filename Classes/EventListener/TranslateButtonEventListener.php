@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\EventListener;
 
@@ -32,7 +32,8 @@ final class TranslateButtonEventListener
         private readonly TranslationServiceFactory $translationServiceFactory,
         private readonly ExtensionConfiguration $extensionConfiguration,
         private readonly TranslatableTablesLoader $translatableTablesLoader,
-    ) {}
+    ) {
+    }
 
     public function __invoke(ModifyButtonBarEvent $event): void
     {
@@ -89,13 +90,13 @@ final class TranslateButtonEventListener
             ->setHref('#')
             ->setTitle($title)
             ->setDataAttributes([
-                'translate-url' => $translateUrl,
-                'translate-table' => $table,
-                'translate-uid' => (string)$uid,
-                'translate-default-provider' => $defaultProvider,
+                'translate-url'                     => $translateUrl,
+                'translate-table'                   => $table,
+                'translate-uid'                     => (string)$uid,
+                'translate-default-provider'        => $defaultProvider,
                 'translate-default-source-language' => $defaultSourceLanguage,
-                'translate-available-providers' => implode(',', $this->translationServiceFactory->getAvailableProviderNames()),
-                'js' => 'translate-button',
+                'translate-available-providers'     => implode(',', $this->translationServiceFactory->getAvailableProviderNames()),
+                'js'                                => 'translate-button',
             ])
             ->setIcon($this->iconFactory->getIcon('actions-localize', IconSize::SMALL))
             ->setShowLabelText(true);
@@ -114,4 +115,3 @@ final class TranslateButtonEventListener
         return $GLOBALS['LANG'] ?? null;
     }
 }
-

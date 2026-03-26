@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Service;
 
@@ -14,7 +14,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  * Uses a system prompt that instructs the model to behave as a professional
  * translator and to preserve any HTML markup in the source text.
  */
-final class OpenAiTranslationService implements TranslationServiceInterface
+class OpenAiTranslationService implements TranslationServiceInterface
 {
     private string $apiKey;
     private string $model;
@@ -61,7 +61,7 @@ final class OpenAiTranslationService implements TranslationServiceInterface
         }
 
         $payload = [
-            'model' => $this->model,
+            'model'    => $this->model,
             'messages' => [
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $text],
@@ -75,20 +75,18 @@ final class OpenAiTranslationService implements TranslationServiceInterface
             [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Content-Type' => 'application/json',
+                    'Content-Type'  => 'application/json',
                 ],
                 'body' => json_encode($payload),
             ]
         );
 
         if ($response->getStatusCode() !== 200) {
-            throw new \RuntimeException(
-                'OpenAI API error: HTTP ' . $response->getStatusCode() . ' – ' . $response->getBody()->getContents(),
-                1_700_000_012
-            );
+            throw new \RuntimeException('OpenAI API error: HTTP ' . $response->getStatusCode() . ' – ' . $response->getBody()->getContents(), 1_700_000_012);
         }
 
         $data = json_decode($response->getBody()->getContents(), true);
+
         return (string)($data['choices'][0]['message']['content'] ?? '');
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Service;
 
@@ -17,7 +17,7 @@ final class TranslationServiceFactory
         OpenAiTranslationService $openAiService,
     ) {
         $this->services = [
-            $deeplService->getName() => $deeplService,
+            $deeplService->getName()  => $deeplService,
             $openAiService->getName() => $openAiService,
         ];
     }
@@ -28,11 +28,9 @@ final class TranslationServiceFactory
     public function get(string $provider): TranslationServiceInterface
     {
         if (!isset($this->services[$provider])) {
-            throw new \InvalidArgumentException(
-                sprintf('Unsupported translation provider "%s". Supported: %s', $provider, implode(', ', array_keys($this->services))),
-                1_700_000_020
-            );
+            throw new \InvalidArgumentException(sprintf('Unsupported translation provider "%s". Supported: %s', $provider, implode(', ', array_keys($this->services))), 1_700_000_020);
         }
+
         return $this->services[$provider];
     }
 
@@ -53,6 +51,6 @@ final class TranslationServiceFactory
      */
     public function getAvailableProviderNames(): array
     {
-        return array_keys(array_filter($this->services, static fn(TranslationServiceInterface $s) => $s->isAvailable()));
+        return array_keys(array_filter($this->services, static fn (TranslationServiceInterface $s) => $s->isAvailable()));
     }
 }

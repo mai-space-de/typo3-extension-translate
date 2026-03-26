@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Maispace\MaiTranslate\Controller;
 
@@ -26,7 +26,8 @@ final class TranslateController
         private readonly TranslationServiceFactory $translationServiceFactory,
         private readonly ConnectionPool $connectionPool,
         private readonly TranslatableTablesLoader $translatableTablesLoader,
-    ) {}
+    ) {
+    }
 
     /**
      * Translates text fields of a record and returns the translated values.
@@ -118,12 +119,13 @@ final class TranslateController
      * Returns the subset of translatable fields that actually exist in the record.
      *
      * @param array<string, list<string>> $translatableTables
+     *
      * @return string[]
      */
     private function resolveFieldsToTranslate(string $table, array $record, array $translatableTables): array
     {
         $candidates = $translatableTables[$table] ?? [];
-        return array_filter($candidates, static fn(string $field) => array_key_exists($field, $record));
+
+        return array_filter($candidates, static fn (string $field) => array_key_exists($field, $record));
     }
 }
-
