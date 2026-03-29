@@ -1,26 +1,17 @@
 <?php
-
 $EM_CONF[$_EXTKEY] = [
-    'title' => 'Translate',
-    'description' => 'Adds a translate button to TYPO3 backend for pages and content elements using DeepL or OpenAI.',
-    'version' => '13.0.0',
+    'title' => 'Mai Translate',
+    'description' => 'Backend translation extension using DeepL or OpenAI to translate TYPO3 content records. Integrates with the TYPO3 backend translation workflow.',
+    'category' => 'module',
+    'author' => 'Maispace',
+    'author_email' => '',
     'state' => 'stable',
-    'category' => 'templates',
-    'author' => 'Joel Maximilian Mai',
-    'author_email' => 'joel@maispace.de',
-    'author_company' => 'Maispace',
+    'version' => '1.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '13.4.0-13.4.99',
+            'typo3' => '13.4.0-14.99.99',
         ],
         'conflicts' => [],
-    ],
-    'uploadfolder' => 0,
-    'createDirs' => '',
-    'clearCacheOnLoad' => 1,
-    'autoload' => [
-        'psr-4' => [
-            'Maispace\\MaiTranslate\\' => 'Classes',
-        ],
+        'suggests' => [],
     ],
 ];
