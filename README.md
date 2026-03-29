@@ -5,7 +5,7 @@
 
 Backend translation extension using DeepL or OpenAI to translate TYPO3 content records. Integrates with the TYPO3 backend translation workflow.
 
-**Requires:** TYPO3 13.4 LTS / 14.0 · PHP 8.2+
+**Requires:** TYPO3 13.4 LTS / 14.1 · PHP 8.2+
 
 ---
 
