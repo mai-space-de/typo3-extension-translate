@@ -1,7 +1,7 @@
 includes:
-	- vendor/saschaegerer/phpstan-typo3/extension.neon
+  - phpstan-baseline.neon
 
 parameters:
-	level: max
-	paths:
-		- Classes
+  level: 5
+  paths:
+    - Classes

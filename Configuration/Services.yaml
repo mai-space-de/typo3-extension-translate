@@ -6,12 +6,4 @@ services:
 
   Maispace\MaiTranslate\:
     resource: '../Classes/*'
-
-  Maispace\MaiTranslate\Controller\TranslateController:
-    public: true
-
-  Maispace\MaiTranslate\EventListener\TranslateButtonEventListener:
-    tags:
-      - name: event.listener
-        identifier: 'maispace-translate/modify-button-bar'
-        event: TYPO3\CMS\Backend\Template\Components\ModifyButtonBarEvent
+    exclude: '../Classes/Domain/Model/*'
