@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Maispace\MaiBase\TableConfigurationArray\FieldConfig\InputConfig;
+use Maispace\MaiBase\TableConfigurationArray\FieldConfig\NumberConfig;
+use Maispace\MaiBase\TableConfigurationArray\FieldConfig\SelectSingleConfig;
 use Maispace\MaiBase\TableConfigurationArray\Helper;
 use Maispace\MaiBase\TableConfigurationArray\Table;
 
@@ -20,53 +23,47 @@ return (new Table($lang('table.tx_maitranslate_log')))
     ->addColumn(
         'record_table',
         $lang('tx_maitranslate_log.record_table'),
-        ['type' => 'input', 'size' => 50, 'max' => 255, 'readOnly' => true]
+        (new InputConfig())->setSize(50)->setMax(255)->setReadOnly()
     )
     ->addColumn(
         'record_uid',
         $lang('tx_maitranslate_log.record_uid'),
-        ['type' => 'number', 'format' => 'integer', 'readOnly' => true]
+        (new NumberConfig())->setFormat('integer')->setReadOnly()
     )
     ->addColumn(
         'field',
         $lang('tx_maitranslate_log.field'),
-        ['type' => 'input', 'size' => 50, 'max' => 255, 'readOnly' => true]
+        (new InputConfig())->setSize(50)->setMax(255)->setReadOnly()
     )
     ->addColumn(
         'source_language',
         $lang('tx_maitranslate_log.source_language'),
-        ['type' => 'input', 'size' => 10, 'max' => 10, 'readOnly' => true]
+        (new InputConfig())->setSize(10)->setMax(10)->setReadOnly()
     )
     ->addColumn(
         'target_language',
         $lang('tx_maitranslate_log.target_language'),
-        ['type' => 'input', 'size' => 10, 'max' => 10, 'readOnly' => true]
+        (new InputConfig())->setSize(10)->setMax(10)->setReadOnly()
     )
     ->addColumn(
         'provider',
         $lang('tx_maitranslate_log.provider'),
-        [
-            'type' => 'select',
-            'renderType' => 'selectSingle',
-            'items' => [
+        (new SelectSingleConfig())
+            ->setItems([
                 ['label' => 'DeepL', 'value' => 'deepl'],
                 ['label' => 'OpenAI', 'value' => 'openai'],
-            ],
-            'readOnly' => true,
-        ]
+            ])
+            ->setReadOnly()
     )
     ->addColumn(
         'status',
         $lang('tx_maitranslate_log.status'),
-        [
-            'type' => 'select',
-            'renderType' => 'selectSingle',
-            'items' => [
+        (new SelectSingleConfig())
+            ->setItems([
                 ['label' => $lang('tx_maitranslate_log.status.success'), 'value' => 'success'],
                 ['label' => $lang('tx_maitranslate_log.status.failed'), 'value' => 'failed'],
-            ],
-            'readOnly' => true,
-        ]
+            ])
+            ->setReadOnly()
     )
     ->addPalette(
         'record',
