@@ -1,16 +1,15 @@
 paths:
   - Configuration/
 
-linters:
-  Indentation:
-    enabled: true
-    useSpaces: true
-    indentPerLevel: 4
-  DeadCode:
-    enabled: true
-  EmptyBlock:
-    enabled: true
-  NestingConsistency:
-    enabled: true
-  RepeatingRValue:
-    enabled: true
+filePatterns:
+  - "*.typoscript"
+
+sniffs:
+  - class: Helmich\TypoScriptLint\Linter\Sniff\IndentationSniff
+    parameters:
+      useSpaces: true
+      indentPerLevel: 4
+  - class: Helmich\TypoScriptLint\Linter\Sniff\DeadCodeSniff
+  - class: Helmich\TypoScriptLint\Linter\Sniff\EmptySectionSniff
+  - class: Helmich\TypoScriptLint\Linter\Sniff\NestingConsistencySniff
+  - class: Helmich\TypoScriptLint\Linter\Sniff\RepeatingRValueSniff

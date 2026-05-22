@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-05-22T00:00:00Z" product-name="mai_translate">
+        <header/>
+        <body>
+            <trans-unit id="module.title">
+                <source>Mai Translate</source>
+            </trans-unit>
+            <trans-unit id="module.description">
+                <source>View the translation log — a record of all DeepL and OpenAI translation calls with their status.</source>
+            </trans-unit>
+            <trans-unit id="module.log.title">
+                <source>Translation log</source>
+            </trans-unit>
+            <trans-unit id="module.log.empty">
+                <source>No translation log entries found.</source>
+            </trans-unit>
+            <trans-unit id="column.record_table">
+                <source>Table</source>
+            </trans-unit>
+            <trans-unit id="column.record_uid">
+                <source>UID</source>
+            </trans-unit>
+            <trans-unit id="column.field">
+                <source>Field</source>
+            </trans-unit>
+            <trans-unit id="column.source_language">
+                <source>From</source>
+            </trans-unit>
+            <trans-unit id="column.target_language">
+                <source>To</source>
+            </trans-unit>
+            <trans-unit id="column.provider">
+                <source>Provider</source>
+            </trans-unit>
+            <trans-unit id="column.status">
+                <source>Status</source>
+            </trans-unit>
+            <trans-unit id="column.date">
+                <source>Date</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

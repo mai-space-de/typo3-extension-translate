@@ -1,0 +1,11 @@
+# cat=basic//0010; type=string; label=Translation Provider (deepl or openai)
+provider = deepl
+
+# cat=basic//0020; type=string; label=DeepL API Key (free-tier keys end with :fx)
+deepLApiKey =
+
+# cat=basic//0030; type=string; label=OpenAI API Key
+openAiApiKey =
+
+# cat=basic//0040; type=string; label=OpenAI Model (e.g. gpt-4o-mini, gpt-4o)
+openAiModel = gpt-4o-mini

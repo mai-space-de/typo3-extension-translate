@@ -6,4 +6,15 @@ services:
 
   Maispace\MaiTranslate\:
     resource: '../Classes/*'
-    exclude: '../Classes/Domain/Model/*'
+    exclude:
+      - '../Classes/Domain/Model/*'
+      # Concrete provider classes are instantiated by TranslationProviderFactory::create(),
+      # not injected directly, because they require runtime values (API keys) from
+      # ExtensionConfiguration that cannot be auto-wired as scalar constructor arguments.
+      - '../Classes/Provider/DeepLTranslationProvider.php'
+      - '../Classes/Provider/OpenAiTranslationProvider.php'
+
+  # Resolve TranslationProviderInterface via the factory so TranslationService receives
+  # the correct provider (DeepL or OpenAI) based on the mai_translate extension settings.
+  Maispace\MaiTranslate\Provider\TranslationProviderInterface:
+    factory: ['@Maispace\MaiTranslate\Provider\TranslationProviderFactory', 'create']

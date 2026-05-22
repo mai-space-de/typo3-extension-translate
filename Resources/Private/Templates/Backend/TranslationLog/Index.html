@@ -1,0 +1,59 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<be:pageRenderer />
+
+<be:moduleLayout>
+    <f:render section="Content" />
+</be:moduleLayout>
+
+<f:section name="Content">
+    <div class="module-body">
+        <h1><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:module.title" /></h1>
+        <p><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:module.description" /></p>
+
+        <h2><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:module.log.title" /></h2>
+
+        <f:if condition="{logEntries}">
+            <f:then>
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.date" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.record_table" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.record_uid" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.field" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.source_language" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.target_language" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.provider" /></th>
+                            <th><f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:column.status" /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <f:for each="{logEntries}" as="entry">
+                            <tr class="{f:if(condition: entry.isSuccess(), then: '', else: 'table-danger')}">
+                                <td>{entry.uid}</td>
+                                <td>{entry.recordTable}</td>
+                                <td>{entry.recordUid}</td>
+                                <td>{entry.field}</td>
+                                <td>{entry.sourceLanguage}</td>
+                                <td>{entry.targetLanguage}</td>
+                                <td>{entry.provider}</td>
+                                <td>{entry.status}</td>
+                            </tr>
+                        </f:for>
+                    </tbody>
+                </table>
+            </f:then>
+            <f:else>
+                <p class="text-muted">
+                    <f:translate key="LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf:module.log.empty" />
+                </p>
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+
+</html>

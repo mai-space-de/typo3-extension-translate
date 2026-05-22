@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-05-22T00:00:00Z" product-name="mai_translate">
+        <header/>
+        <body>
+            <trans-unit id="table.tx_maitranslate_log">
+                <source>Translation Log</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.record_table">
+                <source>Record table</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.record_uid">
+                <source>Record UID</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.field">
+                <source>Field</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.source_language">
+                <source>Source language</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.target_language">
+                <source>Target language</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.provider">
+                <source>Translation provider</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.status">
+                <source>Status</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.status.success">
+                <source>Success</source>
+            </trans-unit>
+            <trans-unit id="tx_maitranslate_log.status.failed">
+                <source>Failed</source>
+            </trans-unit>
+            <trans-unit id="palette.record">
+                <source>Record</source>
+            </trans-unit>
+            <trans-unit id="palette.translation">
+                <source>Translation</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
