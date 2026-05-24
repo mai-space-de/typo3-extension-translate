@@ -8,13 +8,20 @@ services:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Domain/Model/*'
-      # Concrete provider classes are instantiated by TranslationProviderFactory::create(),
-      # not injected directly, because they require runtime values (API keys) from
-      # ExtensionConfiguration that cannot be auto-wired as scalar constructor arguments.
+      # Concrete provider and service classes are instantiated by their respective
+      # factories at runtime because they require scalar API key values from
+      # ExtensionConfiguration that cannot be auto-wired as constructor arguments.
       - '../Classes/Provider/DeepLTranslationProvider.php'
       - '../Classes/Provider/OpenAiTranslationProvider.php'
+      - '../Classes/Service/OpenAiEmbeddingService.php'
 
   # Resolve TranslationProviderInterface via the factory so TranslationService receives
   # the correct provider (DeepL or OpenAI) based on the mai_translate extension settings.
   Maispace\MaiTranslate\Provider\TranslationProviderInterface:
     factory: ['@Maispace\MaiTranslate\Provider\TranslationProviderFactory', 'create']
+
+  # Resolve EmbeddingServiceInterface via its factory — the concrete service requires
+  # the OpenAI API key from extension configuration, which is not known at container
+  # build time.
+  Maispace\MaiTranslate\Service\EmbeddingServiceInterface:
+    factory: ['@Maispace\MaiTranslate\Service\EmbeddingServiceFactory', 'create']
