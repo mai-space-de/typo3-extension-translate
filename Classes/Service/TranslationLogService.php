@@ -23,7 +23,7 @@ final class TranslationLogService implements TranslationLogServiceInterface
      * @param string $sourceLanguage  Source language ISO code (e.g. 'en')
      * @param string $targetLanguage  Target language ISO code (e.g. 'de')
      * @param string $provider     Translation provider identifier ('deepl' or 'openai')
-     * @param string $status       Translation result ('success' or 'failed')
+     * @param string $status       Translation result ('success', 'truncated', or 'failed')
      */
     public function log(
         string $recordTable,

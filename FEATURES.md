@@ -3,7 +3,8 @@
 * DeepL integration — translate content records via the DeepL REST API (`/v2/translate`)
 * OpenAI integration — alternative translation backend via OpenAI Chat Completions API
 * Configurable provider — switch between DeepL and OpenAI at runtime via Extension Manager settings
-* Translation auditing — every API call is recorded in `tx_maitranslate_log` with table, UID, field, language pair, provider, and success/failure status
+* Translation auditing — every API call is recorded in `tx_maitranslate_log` with table, UID, field, language pair, provider, and result status (`success` / `truncated` / `failed`)
+* Length guard — optional per-target character limit caps over-length translations on a word boundary (multibyte-safe) to protect fixed-size DB columns and UI labels
 * Backend log module — admin-only backend module at `/module/mai-translate` showing the 100 most recent log entries
 
 ---
@@ -98,6 +99,7 @@ translate(
     string $recordTable = '',
     int    $recordUid   = 0,
     string $field       = '',
+    int    $maxLength   = 0,
 ): string
 ```
 
@@ -108,12 +110,16 @@ caller → TranslationService::translate()
            ↓
      provider->translate(text, src, tgt)
            ↓ success                    ↓ failure
-     logService->log(... 'success')   logService->log(... 'failed')
+     lengthGuard->enforce(...)        logService->log(... 'failed')
            ↓                                ↓
-     return $translated               re-throw RuntimeException
+     logService->log(... status)     re-throw RuntimeException
+           ↓
+     return $translated
 ```
 
 **Logging guard:** when `$recordTable === ''`, logging is skipped entirely — no entry is written to `tx_maitranslate_log`. This is intended for ad-hoc or preview translations where auditing is not needed.
+
+**Length guard:** when `$maxLength > 0` and the provider returns a translation longer than that many Unicode characters, `TranslationLengthGuard::enforce()` caps the result to a length-safe value — the translation cut to at most `$maxLength` characters, preferring the last word boundary (a single over-length word is hard-cut). The returned string is guaranteed never to exceed `$maxLength`, and the log entry records the status `'truncated'` instead of `'success'`. `$maxLength = 0` (the default) disables the limit. This protects fixed-size targets such as an SEO title (`varchar(255)`) or fixed-width UI labels from machine-translation length expansion (German/Cyrillic/Arabic targets run longer than English). Lengths are counted with `mb_strlen()`, not bytes.
 
 Inject `TranslationService` via constructor DI. The concrete provider is resolved by the container using `TranslationProviderFactory`.
 
@@ -133,7 +139,7 @@ Sole writer to `tx_maitranslate_log`. Called by `TranslationService` after each 
 | `$sourceLanguage` | string | ISO source language code |
 | `$targetLanguage` | string | ISO target language code |
 | `$provider` | string | Provider identifier (`'deepl'` or `'openai'`) |
-| `$status` | string | Result: `'success'` or `'failed'` |
+| `$status` | string | Result: `'success'`, `'truncated'` (length-capped), or `'failed'` |
 
 Inserts one row with `pid=0`, `tstamp`, and `crdate` set to `time()`.
 
@@ -159,9 +165,9 @@ Immutable value object. All properties are `readonly`; no setters.
 | `sourceLanguage` | string | `getSourceLanguage()` | ISO code |
 | `targetLanguage` | string | `getTargetLanguage()` | ISO code |
 | `provider` | string | `getProvider()` | `'deepl'` or `'openai'` |
-| `status` | string | `getStatus()` | `'success'` or `'failed'` |
+| `status` | string | `getStatus()` | `'success'`, `'truncated'`, or `'failed'` |
 
-Convenience: `isSuccess(): bool` — returns `true` when `status === 'success'`.
+Convenience: `isSuccess(): bool` — returns `true` when `status === 'success'`. A `'truncated'` entry is therefore reported as non-success, flagging translations that were length-capped for editor review.
 
 ---
 

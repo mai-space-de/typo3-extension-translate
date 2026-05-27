@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maispace\MaiTranslate\Tests\Unit\Service;
 
 use Maispace\MaiTranslate\Provider\TranslationProviderInterface;
+use Maispace\MaiTranslate\Service\TranslationLengthGuard;
 use Maispace\MaiTranslate\Service\TranslationLogServiceInterface;
 use Maispace\MaiTranslate\Service\TranslationService;
 use PHPUnit\Framework\Attributes\Test;
@@ -25,7 +26,7 @@ final class TranslationServiceTest extends TestCase
 
         $this->logService = $this->createMock(TranslationLogServiceInterface::class);
 
-        $this->subject = new TranslationService($this->provider, $this->logService);
+        $this->subject = new TranslationService($this->provider, $this->logService, new TranslationLengthGuard());
     }
 
     // ── translate() — happy path ──────────────────────────────────────────────
@@ -91,7 +92,7 @@ final class TranslationServiceTest extends TestCase
         $provider->method('getIdentifier')->willReturn('openai');
         $provider->method('translate')->willReturn('Привіт');
 
-        $subject = new TranslationService($provider, $this->logService);
+        $subject = new TranslationService($provider, $this->logService, new TranslationLengthGuard());
 
         $this->logService->expects(self::once())
             ->method('log')
@@ -141,5 +142,61 @@ final class TranslationServiceTest extends TestCase
         } catch (RuntimeException) {
             // Expected.
         }
+    }
+
+    // ── translate() — length limit ────────────────────────────────────────────
+
+    #[Test]
+    public function translateReturnsFullTextWhenWithinMaxLength(): void
+    {
+        $this->provider->method('translate')->willReturn('Hallo Welt');
+
+        $result = $this->subject->translate('Hello World', 'en', 'de', '', 0, '', 50);
+
+        self::assertSame('Hallo Welt', $result);
+    }
+
+    #[Test]
+    public function translateCapsTranslationThatExceedsMaxLength(): void
+    {
+        $this->provider->method('translate')->willReturn('Hallo Welt');
+
+        $result = $this->subject->translate('Hello World', 'en', 'de', '', 0, '', 8);
+
+        self::assertSame('Hallo', $result);
+    }
+
+    #[Test]
+    public function translateDoesNotCapWhenMaxLengthIsZero(): void
+    {
+        $this->provider->method('translate')->willReturn('Hallo Welt');
+
+        $result = $this->subject->translate('Hello World', 'en', 'de', '', 0, '');
+
+        self::assertSame('Hallo Welt', $result);
+    }
+
+    #[Test]
+    public function translateLogsTruncatedStatusWhenTranslationIsCapped(): void
+    {
+        $this->provider->method('translate')->willReturn('Hallo Welt');
+
+        $this->logService->expects(self::once())
+            ->method('log')
+            ->with('tt_content', 7, 'header', 'en', 'de', 'deepl', 'truncated');
+
+        $this->subject->translate('Hello World', 'en', 'de', 'tt_content', 7, 'header', 8);
+    }
+
+    #[Test]
+    public function translateLogsSuccessStatusWhenWithinMaxLength(): void
+    {
+        $this->provider->method('translate')->willReturn('Hallo Welt');
+
+        $this->logService->expects(self::once())
+            ->method('log')
+            ->with('tt_content', 7, 'header', 'en', 'de', 'deepl', 'success');
+
+        $this->subject->translate('Hello World', 'en', 'de', 'tt_content', 7, 'header', 50);
     }
 }

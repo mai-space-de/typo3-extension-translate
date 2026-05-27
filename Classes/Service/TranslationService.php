@@ -26,10 +26,16 @@ final class TranslationService
     public function __construct(
         private readonly TranslationProviderInterface $provider,
         private readonly TranslationLogServiceInterface $logService,
+        private readonly TranslationLengthGuard $lengthGuard,
     ) {}
 
     /**
      * Translate a single text string and (optionally) write a log entry.
+     *
+     * When $maxLength is positive and the provider returns a translation longer
+     * than that many characters, the result is capped to a length-safe value
+     * (see {@see TranslationLengthGuard}) and the log entry records the status
+     * 'truncated' instead of 'success'.
      *
      * @param string $text           Text to translate (plain or HTML).
      * @param string $sourceLanguage Source language ISO code (e.g. 'en').
@@ -37,8 +43,9 @@ final class TranslationService
      * @param string $recordTable    DB table of the translated record (pass '' to skip logging).
      * @param int    $recordUid      UID of the translated record.
      * @param string $field          Field name that was translated (e.g. 'bodytext').
+     * @param int    $maxLength      Maximum target length in characters; 0 (default) means no limit.
      *
-     * @return string Translated text.
+     * @return string Translated text, length-capped when $maxLength is exceeded.
      *
      * @throws \RuntimeException When the provider signals an API error.
      */
@@ -49,6 +56,7 @@ final class TranslationService
         string $recordTable = '',
         int $recordUid = 0,
         string $field = '',
+        int $maxLength = TranslationLengthGuard::NO_LIMIT,
     ): string {
         $status = 'success';
 
@@ -70,6 +78,11 @@ final class TranslationService
             }
 
             throw $e;
+        }
+
+        if (!$this->lengthGuard->withinLimit($translated, $maxLength)) {
+            $translated = $this->lengthGuard->enforce($translated, $maxLength);
+            $status = 'truncated';
         }
 
         if ($recordTable !== '') {
