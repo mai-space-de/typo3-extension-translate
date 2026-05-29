@@ -32,6 +32,6 @@ final class TranslationLogBackendController extends AbstractBackendController
             'logEntries' => $this->translationLogRepository->findRecent(self::LOG_LIMIT),
         ]);
 
-        return $this->renderModuleResponse($moduleTemplate, 'Backend/TranslationLog/Index');
+        return $this->renderModuleResponse($moduleTemplate, 'Index');
     }
 }
