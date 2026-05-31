@@ -6,6 +6,7 @@
 * Translation auditing — every API call is recorded in `tx_maitranslate_log` with table, UID, field, language pair, provider, and result status (`success` / `truncated` / `failed`)
 * Length guard — optional per-target character limit caps over-length translations on a word boundary (multibyte-safe) to protect fixed-size DB columns and UI labels
 * Backend log module — admin-only backend module at `/module/mai-translate` showing the 100 most recent log entries
+* Hydration overlay command — `vendor/bin/typo3 mai_translate:hydrate-overlays` fills the translatable fields of `sys_language_uid > 0` overlay rows produced by `scripts/hydration/generate-translation-overlays.py` (hydrate-13). The field-per-table list is read from `scripts/hydration/schema/hydration-v1.json` (`translatable_fields` block). Options: `--table`, `--language` (1/2/3), `--limit`, `--dry-run`, `--force`, `--source-language` (default `de`), `--field-map` (override schema path).
 
 ---
 
