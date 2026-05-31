@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maispace\MaiTranslate\Service;
 
 use Maispace\MaiTranslate\Provider\TranslationProviderInterface;
+use TYPO3\CMS\Core\SingletonInterface;
 
 /**
  * Orchestrates a single translation request:
@@ -20,8 +21,12 @@ use Maispace\MaiTranslate\Provider\TranslationProviderInterface;
  *
  * Logging is skipped when $recordTable is an empty string so the service can also
  * be used for ad-hoc translations (e.g. preview mode) without polluting the log.
+ *
+ * Implements SingletonInterface so that functional tests can register it via
+ * GeneralUtility::setSingletonInstance() (which requires SingletonInterface
+ * as of TYPO3 14).
  */
-final class TranslationService
+final class TranslationService implements SingletonInterface
 {
     public function __construct(
         private readonly TranslationProviderInterface $provider,
