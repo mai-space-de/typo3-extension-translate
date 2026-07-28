@@ -19,6 +19,7 @@ return (new Table($lang('table.tx_maitranslate_log')))
     ->recordsAreOnlyAllowedInRoot()
     ->setAccessableOnlyByAdmins()
     ->recordsCanOnlyBeRead()
+    ->disableRecordModule()
     ->addColumn(
         'record_table',
         $lang('tx_maitranslate_log.record_table'),
