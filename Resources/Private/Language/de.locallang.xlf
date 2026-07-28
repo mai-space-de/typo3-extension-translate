@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" target-language="de" datatype="plaintext" original="messages"
+          date="2025-01-01T00:00:00Z" product-name="mai_translate">
+        <header/>
+        <body>
+            <trans-unit id="mlang_tabs_tab">
+                <source>Translate</source>
+                <target>Übersetzung</target>
+            </trans-unit>
+            <trans-unit id="mlang_labels_tablabel">
+                <source>Mai Translate</source>
+                <target>Mai Translate</target>
+            </trans-unit>
+            <trans-unit id="mlang_labels_tabdescr">
+                <source>View the translation log — a record of all DeepL and OpenAI translation calls with their status.</source>
+                <target>Zeigt das Übersetzungsprotokoll — eine Aufzeichnung aller DeepL- und OpenAI-Übersetzungsaufrufe mit ihrem Status.</target>
+            </trans-unit>
+            <trans-unit id="module.title">
+                <source>Mai Translate</source>
+                <target>Mai Translate</target>
+            </trans-unit>
+            <trans-unit id="module.description">
+                <source>View the translation log — a record of all DeepL and OpenAI translation calls with their status.</source>
+                <target>Zeigt das Übersetzungsprotokoll — eine Aufzeichnung aller DeepL- und OpenAI-Übersetzungsaufrufe mit ihrem Status.</target>
+            </trans-unit>
+            <trans-unit id="module.log.title">
+                <source>Translation log</source>
+                <target>Übersetzungsprotokoll</target>
+            </trans-unit>
+            <trans-unit id="module.log.empty">
+                <source>No translation log entries found.</source>
+                <target>Keine Einträge im Übersetzungsprotokoll gefunden.</target>
+            </trans-unit>
+            <trans-unit id="column.record_table">
+                <source>Table</source>
+                <target>Tabelle</target>
+            </trans-unit>
+            <trans-unit id="column.record_uid">
+                <source>UID</source>
+                <target>UID</target>
+            </trans-unit>
+            <trans-unit id="column.field">
+                <source>Field</source>
+                <target>Feld</target>
+            </trans-unit>
+            <trans-unit id="column.source_language">
+                <source>From</source>
+                <target>Von</target>
+            </trans-unit>
+            <trans-unit id="column.target_language">
+                <source>To</source>
+                <target>Nach</target>
+            </trans-unit>
+            <trans-unit id="column.provider">
+                <source>Provider</source>
+                <target>Anbieter</target>
+            </trans-unit>
+            <trans-unit id="column.status">
+                <source>Status</source>
+                <target>Status</target>
+            </trans-unit>
+            <trans-unit id="column.date">
+                <source>Date</source>
+                <target>Datum</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
