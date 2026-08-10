@@ -12,7 +12,7 @@ use RuntimeException;
  *
  * Loaded by {@see \Maispace\MaiTranslate\Command\HydrateTranslationsCommand} to
  * decide which overlay rows must be filled by `mai_translate` and which fields
- * on each row are subject to translation.
+ * on each row are subject to translation, copy-sync, FAL overlays, and slug regen.
  *
  * The schema file lives outside the extension because it is a project-wide
  * hydration contract shared with the Python overlay generator
@@ -23,9 +23,16 @@ use RuntimeException;
 final class TranslationFieldMap
 {
     /**
-     * @param array<int, string>                                                 $languageUidMap   sys_language_uid → ISO code
-     * @param array<string, array{fields: list<string>, parent_field: string, uid_offset_key: string}> $tables
-     * @param array<string, array<int, int>>                                     $overlayUidOffsets per uid_offset_key + language uid → offset
+     * @param array<int, string> $languageUidMap sys_language_uid → ISO code
+     * @param array<string, array{
+     *     fields: list<string>,
+     *     copy_fields: list<string>,
+     *     parent_field: string,
+     *     uid_offset_key: string,
+     *     regenerate_slug: bool,
+     *     fal: list<array{fieldname: string, count_field: string}>
+     * }> $tables
+     * @param array<string, array<int, int>> $overlayUidOffsets per uid_offset_key + language uid → offset
      */
     public function __construct(
         public readonly array $languageUidMap,
@@ -126,10 +133,38 @@ final class TranslationFieldMap
                 throw new RuntimeException(sprintf('translatable_fields.tables.%s.uid_offset_key references an unknown offset bucket: %s', $tableName, (string) $offsetKey));
             }
 
+            $copyFields = $spec['copy_fields'] ?? [];
+            if (!is_array($copyFields)) {
+                throw new RuntimeException(sprintf('translatable_fields.tables.%s.copy_fields must be a list when set.', $tableName));
+            }
+
+            $falRaw = $spec['fal'] ?? [];
+            if (!is_array($falRaw)) {
+                throw new RuntimeException(sprintf('translatable_fields.tables.%s.fal must be a list when set.', $tableName));
+            }
+            $fal = [];
+            foreach ($falRaw as $falSpec) {
+                if (!is_array($falSpec)) {
+                    continue;
+                }
+                $fieldname = (string) ($falSpec['fieldname'] ?? '');
+                $countField = (string) ($falSpec['count_field'] ?? $fieldname);
+                if ($fieldname === '') {
+                    continue;
+                }
+                $fal[] = [
+                    'fieldname' => $fieldname,
+                    'count_field' => $countField !== '' ? $countField : $fieldname,
+                ];
+            }
+
             $normalisedTables[$tableName] = [
                 'fields' => array_values(array_map('strval', $fields)),
+                'copy_fields' => array_values(array_map('strval', $copyFields)),
                 'parent_field' => $parentField,
                 'uid_offset_key' => $offsetKey,
+                'regenerate_slug' => (bool) ($spec['regenerate_slug'] ?? false),
+                'fal' => $fal,
             ];
         }
 
@@ -155,20 +190,35 @@ final class TranslationFieldMap
      */
     public function fieldsFor(string $table): array
     {
-        if (!isset($this->tables[$table])) {
-            throw new RuntimeException(sprintf('Table %s is not in the translatable_fields registry.', $table));
-        }
+        return $this->tableSpec($table)['fields'];
+    }
 
-        return $this->tables[$table]['fields'];
+    /**
+     * Non-translatable fields copied 1:1 from the default-language source row.
+     *
+     * @return list<string>
+     */
+    public function copyFieldsFor(string $table): array
+    {
+        return $this->tableSpec($table)['copy_fields'];
     }
 
     public function parentFieldFor(string $table): string
     {
-        if (!isset($this->tables[$table])) {
-            throw new RuntimeException(sprintf('Table %s is not in the translatable_fields registry.', $table));
-        }
+        return $this->tableSpec($table)['parent_field'];
+    }
 
-        return $this->tables[$table]['parent_field'];
+    public function shouldRegenerateSlug(string $table): bool
+    {
+        return $this->tableSpec($table)['regenerate_slug'];
+    }
+
+    /**
+     * @return list<array{fieldname: string, count_field: string}>
+     */
+    public function falSpecsFor(string $table): array
+    {
+        return $this->tableSpec($table)['fal'];
     }
 
     public function isoCodeFor(int $languageUid): string
@@ -189,5 +239,24 @@ final class TranslationFieldMap
         sort($uids);
 
         return $uids;
+    }
+
+    /**
+     * @return array{
+     *     fields: list<string>,
+     *     copy_fields: list<string>,
+     *     parent_field: string,
+     *     uid_offset_key: string,
+     *     regenerate_slug: bool,
+     *     fal: list<array{fieldname: string, count_field: string}>
+     * }
+     */
+    private function tableSpec(string $table): array
+    {
+        if (!isset($this->tables[$table])) {
+            throw new RuntimeException(sprintf('Table %s is not in the translatable_fields registry.', $table));
+        }
+
+        return $this->tables[$table];
     }
 }

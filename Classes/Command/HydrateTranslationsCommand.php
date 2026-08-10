@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Maispace\MaiTranslate\Command;
 
 use Doctrine\DBAL\ParameterType;
+use Maispace\MaiTranslate\Hydration\FalOverlaySyncService;
+use Maispace\MaiTranslate\Hydration\OverlayFieldSyncService;
+use Maispace\MaiTranslate\Hydration\OverlaySlugService;
+use Maispace\MaiTranslate\Hydration\OverlayStubService;
 use Maispace\MaiTranslate\Hydration\TranslationFieldMap;
 use Maispace\MaiTranslate\Service\TranslationLengthGuard;
 use Maispace\MaiTranslate\Service\TranslationService;
@@ -20,25 +24,18 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 /**
  * CLI: `vendor/bin/typo3 mai_translate:hydrate-overlays`
  *
- * Fills the translatable fields of `sys_language_uid > 0` overlay rows created
- * by hydrate-13 (`scripts/hydration/generate-translation-overlays.py`) using
- * {@see TranslationService}. The list of translatable fields per table is read
- * from the `translatable_fields` registry inside
- * `scripts/hydration/schema/hydration-v1.json`.
+ * Full post-translation pipeline for `sys_language_uid > 0` overlays:
+ *   1. Ensure overlay stubs exist (blank text fields, copy_fields from DE)
+ *   2. Translate empty translatable fields via DeepL / OpenAI
+ *   3. Sync copy_fields (recurrence, dates, typolinks, …) from DE source
+ *   4. Sync FAL `sys_file_reference` overlays
+ *   5. Regenerate page/news/job slugs via SlugHelper
  *
- * Workflow per overlay row:
- *   1. Look up the default-language source row via the table's parent field
- *      (`l10n_parent` for tx_* / sys_category, `l18n_parent` for tt_content).
- *   2. For every translatable field that is empty on the overlay, translate the
- *      corresponding source value (DeepL / OpenAI provider, decided by extension
- *      configuration) and UPDATE the overlay row.
- *
- * The command is idempotent: it skips overlays whose translatable fields are
- * already non-empty. Use `--force` to re-translate them.
+ * Field map: `scripts/hydration/schema/hydration-v1.json` (`translatable_fields`).
  */
 #[AsCommand(
     name: 'mai_translate:hydrate-overlays',
-    description: 'Fill translation overlay rows produced by hydrate-13 using mai_translate providers.',
+    description: 'Ensure, translate, sync and finalize language overlay rows via mai_translate.',
 )]
 final class HydrateTranslationsCommand extends Command
 {
@@ -47,6 +44,10 @@ final class HydrateTranslationsCommand extends Command
     public function __construct(
         private readonly TranslationService $translationService,
         private readonly ConnectionPool $connectionPool,
+        private readonly OverlayStubService $overlayStubService,
+        private readonly OverlayFieldSyncService $overlayFieldSyncService,
+        private readonly FalOverlaySyncService $falOverlaySyncService,
+        private readonly OverlaySlugService $overlaySlugService,
     ) {
         parent::__construct();
     }
@@ -83,19 +84,31 @@ final class HydrateTranslationsCommand extends Command
                 'limit',
                 null,
                 InputOption::VALUE_REQUIRED,
-                'Maximum number of overlay rows to process across the whole run.',
+                'Maximum number of overlay rows to translate across the whole run.',
             )
             ->addOption(
                 'dry-run',
                 null,
                 InputOption::VALUE_NONE,
-                'Skip provider calls and database writes — only report what would be translated.',
+                'Skip provider calls and database writes — only report what would happen.',
             )
             ->addOption(
                 'force',
                 null,
                 InputOption::VALUE_NONE,
                 'Re-translate fields even when the overlay already holds a non-empty value.',
+            )
+            ->addOption(
+                'skip-ensure',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip creating missing overlay stubs before translation.',
+            )
+            ->addOption(
+                'skip-finalize',
+                null,
+                InputOption::VALUE_NONE,
+                'Skip copy-field sync, FAL overlays and slug regeneration after translation.',
             );
     }
 
@@ -105,6 +118,8 @@ final class HydrateTranslationsCommand extends Command
         $sourceLanguage = (string) ($input->getOption('source-language') ?? 'de');
         $dryRun = (bool) $input->getOption('dry-run');
         $force = (bool) $input->getOption('force');
+        $skipEnsure = (bool) $input->getOption('skip-ensure');
+        $skipFinalize = (bool) $input->getOption('skip-finalize');
         $limit = $input->getOption('limit');
         $limit = $limit === null ? null : max(0, (int) $limit);
 
@@ -135,6 +150,11 @@ final class HydrateTranslationsCommand extends Command
             $io->note('Dry-run mode — no provider calls, no database writes.');
         }
 
+        if (!$skipEnsure) {
+            $created = $this->overlayStubService->ensureOverlays($fieldMap, $tables, $targetLanguages, $dryRun);
+            $io->writeln(sprintf('Ensure stubs: %d overlay(s) %s.', $created, $dryRun ? 'would be created' : 'created'));
+        }
+
         $processed = 0;
         $translated = 0;
         $skipped = 0;
@@ -144,12 +164,37 @@ final class HydrateTranslationsCommand extends Command
                 $io->warning(sprintf('Table %s is not in the translatable_fields registry — skipping.', $table));
                 continue;
             }
-            $fields = $fieldMap->fieldsFor($table);
+            if (!$this->tableExists($table)) {
+                $io->warning(sprintf('Table %s does not exist — skipping.', $table));
+                continue;
+            }
+
+            $columns = $this->tableColumns($table);
+            $fields = array_values(array_filter(
+                $fieldMap->fieldsFor($table),
+                static fn(string $f): bool => isset($columns[$f]),
+            ));
+            $copyFields = array_values(array_filter(
+                $fieldMap->copyFieldsFor($table),
+                static fn(string $f): bool => isset($columns[$f]),
+            ));
             $parentField = $fieldMap->parentFieldFor($table);
+            if (!isset($columns[$parentField])) {
+                $io->warning(sprintf('Table %s missing parent field %s — skipping.', $table, $parentField));
+                continue;
+            }
 
             foreach ($targetLanguages as $languageUid) {
                 $isoCode = $fieldMap->isoCodeFor($languageUid);
-                $overlays = $this->findOverlayRows($table, $languageUid, $parentField, $fields, $force, $limit !== null ? $limit - $processed : null);
+                $overlays = $this->findOverlayRows(
+                    $table,
+                    $languageUid,
+                    $parentField,
+                    $fields,
+                    $copyFields,
+                    $force,
+                    $limit !== null ? $limit - $processed : null,
+                );
 
                 foreach ($overlays as $overlay) {
                     $processed++;
@@ -158,7 +203,7 @@ final class HydrateTranslationsCommand extends Command
                         $skipped++;
                         continue;
                     }
-                    $sourceRow = $this->findSourceRow($table, $sourceUid, $fields);
+                    $sourceRow = $this->findSourceRow($table, $sourceUid, $fields, $copyFields);
                     if ($sourceRow === null) {
                         $skipped++;
                         continue;
@@ -190,6 +235,13 @@ final class HydrateTranslationsCommand extends Command
                         );
                     }
 
+                    foreach ($copyFields as $field) {
+                        if (!array_key_exists($field, $sourceRow)) {
+                            continue;
+                        }
+                        $updates[$field] = $sourceRow[$field];
+                    }
+
                     if ($updates === []) {
                         $skipped++;
                         continue;
@@ -209,12 +261,27 @@ final class HydrateTranslationsCommand extends Command
             }
         }
 
-        $io->success(sprintf(
-            'Processed %d overlay rows: %d translated, %d skipped.',
+        $io->writeln(sprintf(
+            'Translate: processed %d overlay rows — %d translated, %d skipped.',
             $processed,
             $translated,
             $skipped,
         ));
+
+        if (!$skipFinalize) {
+            $synced = $this->overlayFieldSyncService->syncCopyFields($fieldMap, $tables, $targetLanguages, $dryRun);
+            $fal = $this->falOverlaySyncService->syncFalOverlays($fieldMap, $tables, $targetLanguages, $dryRun);
+            $slugs = $this->overlaySlugService->regenerateSlugs($fieldMap, $tables, $targetLanguages, $dryRun);
+            $io->writeln(sprintf(
+                'Finalize: copy_fields=%d, fal=%d, slugs=%d%s.',
+                $synced,
+                $fal,
+                $slugs,
+                $dryRun ? ' (dry-run)' : '',
+            ));
+        }
+
+        $io->success('hydrate-overlays finished.');
 
         return Command::SUCCESS;
     }
@@ -230,6 +297,7 @@ final class HydrateTranslationsCommand extends Command
 
     /**
      * @param list<string> $fields
+     * @param list<string> $copyFields
      *
      * @return list<array<string, mixed>>
      */
@@ -238,13 +306,14 @@ final class HydrateTranslationsCommand extends Command
         int $languageUid,
         string $parentField,
         array $fields,
+        array $copyFields,
         bool $force,
         ?int $limit,
     ): array {
         $connection = $this->connectionPool->getQueryBuilderForTable($table);
         $connection->getRestrictions()->removeAll();
         $query = $connection
-            ->select(...array_unique(['uid', 'sys_language_uid', $parentField, ...$fields]))
+            ->select(...array_values(array_unique(['uid', 'sys_language_uid', $parentField, ...$fields, ...$copyFields])))
             ->from($table)
             ->where(
                 $connection->expr()->eq('sys_language_uid', $connection->createNamedParameter($languageUid, ParameterType::INTEGER)),
@@ -274,15 +343,16 @@ final class HydrateTranslationsCommand extends Command
 
     /**
      * @param list<string> $fields
+     * @param list<string> $copyFields
      *
      * @return array<string, mixed>|null
      */
-    private function findSourceRow(string $table, int $sourceUid, array $fields): ?array
+    private function findSourceRow(string $table, int $sourceUid, array $fields, array $copyFields): ?array
     {
         $connection = $this->connectionPool->getQueryBuilderForTable($table);
         $connection->getRestrictions()->removeAll();
         $row = $connection
-            ->select(...array_unique(['uid', ...$fields]))
+            ->select(...array_values(array_unique(['uid', ...$fields, ...$copyFields])))
             ->from($table)
             ->where(
                 $connection->expr()->eq('uid', $connection->createNamedParameter($sourceUid, ParameterType::INTEGER)),
@@ -293,5 +363,28 @@ final class HydrateTranslationsCommand extends Command
             ->fetchAssociative();
 
         return $row === false ? null : $row;
+    }
+
+    private function tableExists(string $table): bool
+    {
+        return $this->connectionPool
+            ->getConnectionForTable($table)
+            ->createSchemaManager()
+            ->tablesExist([$table]);
+    }
+
+    /**
+     * @return array<string, true>
+     */
+    private function tableColumns(string $table): array
+    {
+        $set = [];
+        foreach (
+            $this->connectionPool->getConnectionForTable($table)->createSchemaManager()->listTableColumns($table) as $col
+        ) {
+            $set[$col->getName()] = true;
+        }
+
+        return $set;
     }
 }

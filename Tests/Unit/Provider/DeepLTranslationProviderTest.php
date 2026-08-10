@@ -162,6 +162,51 @@ final class DeepLTranslationProviderTest extends TestCase
         $provider->translate('text', 'en', 'de');
     }
 
+    #[Test]
+    public function translateRetriesOn429ThenReturnsTranslation(): void
+    {
+        $rateLimited = $this->makeResponseMock(429, $this->makeBodyMock('{"message":"Too many requests"}'));
+        $success = $this->makeResponseMock(200, $this->makeBodyMock(json_encode([
+            'translations' => [['text' => 'Hello']],
+        ], JSON_THROW_ON_ERROR)));
+
+        $this->requestFactory->expects(self::exactly(2))
+            ->method('request')
+            ->willReturnOnConsecutiveCalls($rateLimited, $success);
+
+        $provider = new DeepLTranslationProvider(
+            $this->requestFactory,
+            'key:fx',
+            true,
+            maxAttempts: 3,
+            initialBackoffMs: 0,
+        );
+        $result = $provider->translate('Hallo', 'de', 'en');
+
+        self::assertSame('Hello', $result);
+    }
+
+    #[Test]
+    public function translateThrowsAfterExhausting429Retries(): void
+    {
+        $rateLimited = $this->makeResponseMock(429, $this->makeBodyMock('{"message":"Too many requests"}'));
+        $this->requestFactory->expects(self::exactly(3))
+            ->method('request')
+            ->willReturn($rateLimited);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessageMatches('/429/');
+
+        $provider = new DeepLTranslationProvider(
+            $this->requestFactory,
+            'key:fx',
+            true,
+            maxAttempts: 3,
+            initialBackoffMs: 0,
+        );
+        $provider->translate('Hallo', 'de', 'en');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private function makeBodyMock(string $contents): StreamInterface&MockObject

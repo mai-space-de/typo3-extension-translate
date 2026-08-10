@@ -59,6 +59,36 @@ final class TranslationFieldMapTest extends TestCase
     }
 
     #[Test]
+    public function copyFieldsAndFalAndSlugFlagsDefaultSafely(): void
+    {
+        $map = TranslationFieldMap::fromArray(self::registryFixture());
+
+        self::assertSame([], $map->copyFieldsFor('tt_content'));
+        self::assertSame([], $map->falSpecsFor('tt_content'));
+        self::assertFalse($map->shouldRegenerateSlug('tt_content'));
+    }
+
+    #[Test]
+    public function copyFieldsFalAndSlugFlagsAreLoadedWhenPresent(): void
+    {
+        $registry = self::registryFixture();
+        $registry['tables']['tt_content']['copy_fields'] = ['pid', 'CType'];
+        $registry['tables']['tt_content']['regenerate_slug'] = true;
+        $registry['tables']['tt_content']['fal'] = [
+            ['fieldname' => 'image', 'count_field' => 'image'],
+        ];
+
+        $map = TranslationFieldMap::fromArray($registry);
+
+        self::assertSame(['pid', 'CType'], $map->copyFieldsFor('tt_content'));
+        self::assertTrue($map->shouldRegenerateSlug('tt_content'));
+        self::assertSame(
+            [['fieldname' => 'image', 'count_field' => 'image']],
+            $map->falSpecsFor('tt_content'),
+        );
+    }
+
+    #[Test]
     public function parentFieldDistinguishesTtContentFromDomainTables(): void
     {
         $map = TranslationFieldMap::fromArray(self::registryFixture());
@@ -175,5 +205,28 @@ final class TranslationFieldMapTest extends TestCase
         } finally {
             @unlink($temp);
         }
+    }
+
+    #[Test]
+    public function projectHydrationSchemaMapsTtContentTypolinksAsCopyFields(): void
+    {
+        $schemaPath = dirname(__DIR__, 5) . '/scripts/hydration/schema/hydration-v1.json';
+        if (!is_file($schemaPath)) {
+            self::markTestSkipped('Project hydration-v1.json not available (standalone package checkout).');
+        }
+
+        $map = TranslationFieldMap::fromFile($schemaPath);
+        $copyFields = $map->copyFieldsFor('tt_content');
+        $fields = $map->fieldsFor('tt_content');
+
+        self::assertContains('header_link', $copyFields);
+        self::assertContains('tx_maitheme_link', $copyFields);
+        self::assertContains('tx_maitheme_link_secondary', $copyFields);
+        self::assertContains('tx_maitheme_icon_identifier', $copyFields);
+        self::assertContains('tx_maitheme_accent', $copyFields);
+        self::assertContains('tx_maitheme_link_text', $fields);
+        self::assertContains('tx_maitheme_link_secondary_text', $fields);
+        self::assertNotContains('tx_maitheme_link', $fields);
+        self::assertNotContains('tx_maitheme_link_text', $copyFields);
     }
 }

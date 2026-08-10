@@ -61,10 +61,14 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
         );
         GeneralUtility::setSingletonInstance(TranslationService::class, $translationService);
 
-        // Get the command from the container with required dependencies
+        $pool = $this->getConnectionPool();
         $command = new \Maispace\MaiTranslate\Command\HydrateTranslationsCommand(
             $translationService,
-            $this->getConnectionPool(),
+            $pool,
+            new \Maispace\MaiTranslate\Hydration\OverlayStubService($pool),
+            new \Maispace\MaiTranslate\Hydration\OverlayFieldSyncService($pool),
+            new \Maispace\MaiTranslate\Hydration\FalOverlaySyncService($pool),
+            new \Maispace\MaiTranslate\Hydration\OverlaySlugService($pool),
         );
         $this->commandTester = new CommandTester($command);
 
@@ -197,6 +201,8 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
             $this->commandTester->execute([
                 '--field-map' => $fieldMapPath,
                 '--table' => 'tx_maifaq_faq',
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             // Assert command succeeded
@@ -247,6 +253,8 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
                 '--field-map' => $fieldMapPath,
                 '--table' => 'tx_maifaq_faq',
                 '--dry-run' => true,
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             // Assert command succeeded
@@ -300,6 +308,8 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
                 '--field-map' => $fieldMapPath,
                 '--table' => 'tx_maifaq_faq',
                 '--language' => '1',
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             $enRowBefore = $connection->select(['uid', 'question', 'answer'], 'tx_maifaq_faq', ['uid' => $fixtures['en_overlay_uid']])
@@ -313,6 +323,8 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
                 '--table' => 'tx_maifaq_faq',
                 '--language' => '1',
                 '--force' => true,
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             $enRowAfter = $connection->select(['uid', 'question', 'answer'], 'tx_maifaq_faq', ['uid' => $fixtures['en_overlay_uid']])
@@ -348,6 +360,8 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
                 '--field-map' => $fieldMapPath,
                 '--table' => 'tx_maifaq_faq',
                 '--limit' => '1',
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             self::assertSame(Command::SUCCESS, $this->commandTester->getStatusCode());
@@ -396,10 +410,193 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
             $this->commandTester->execute([
                 '--field-map' => $fieldMapPath,
                 '--table' => 'tx_unknown_table',
+                '--skip-ensure' => true,
+                '--skip-finalize' => true,
             ]);
 
             self::assertSame(Command::SUCCESS, $this->commandTester->getStatusCode());
             self::assertStringContainsString('tx_unknown_table is not in the translatable_fields registry', $this->commandTester->getDisplay());
+        } finally {
+            @unlink($fieldMapPath);
+        }
+    }
+
+    #[Test]
+    public function finalizeSyncsCopyFieldsOntoOverlays(): void
+    {
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_maifaq_faq');
+        $connection->executeStatement('ALTER TABLE tx_maifaq_faq ADD COLUMN sorting INTEGER DEFAULT 0 NOT NULL');
+
+        $connection->insert('tx_maifaq_faq', [
+            'pid' => 1,
+            'sys_language_uid' => 0,
+            'question' => 'Q?',
+            'answer' => 'A.',
+            'l10n_parent' => 0,
+            'deleted' => 0,
+            'hidden' => 0,
+            'sorting' => 42,
+        ]);
+        $sourceUid = (int) $connection->lastInsertId('tx_maifaq_faq');
+
+        $connection->insert('tx_maifaq_faq', [
+            'pid' => 1,
+            'sys_language_uid' => 1,
+            'question' => 'Already translated',
+            'answer' => 'Already translated',
+            'l10n_parent' => $sourceUid,
+            'deleted' => 0,
+            'hidden' => 0,
+            'sorting' => 0,
+        ]);
+        $overlayUid = (int) $connection->lastInsertId('tx_maifaq_faq');
+
+        $fieldMapPath = $this->createTemporaryFieldMap([
+            'language_uid_map' => ['1' => 'en'],
+            'overlay_uid_offsets' => [
+                'domain_records' => ['1' => 1000],
+            ],
+            'tables' => [
+                'tx_maifaq_faq' => [
+                    'fields' => ['question', 'answer'],
+                    'copy_fields' => ['sorting'],
+                    'parent_field' => 'l10n_parent',
+                    'uid_offset_key' => 'domain_records',
+                ],
+            ],
+        ]);
+
+        try {
+            // Text already filled → translate loop skips; finalize must still sync copy_fields.
+            $this->commandTester->execute([
+                '--field-map' => $fieldMapPath,
+                '--table' => 'tx_maifaq_faq',
+                '--language' => '1',
+                '--skip-ensure' => true,
+            ]);
+
+            self::assertSame(Command::SUCCESS, $this->commandTester->getStatusCode());
+
+            $row = $connection->select(['question', 'sorting'], 'tx_maifaq_faq', ['uid' => $overlayUid])
+                ->fetchAssociative();
+            self::assertSame('Already translated', $row['question']);
+            self::assertSame(42, (int) $row['sorting']);
+        } finally {
+            @unlink($fieldMapPath);
+        }
+    }
+
+    #[Test]
+    public function finalizeSyncsTypolinkTargetsAndTranslatesLinkLabels(): void
+    {
+        $connection = $this->getConnectionPool()->getConnectionForTable('tt_content');
+        $connection->executeStatement('DROP TABLE IF EXISTS tt_content');
+        $connection->executeStatement('
+            CREATE TABLE tt_content (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                pid INTEGER DEFAULT 0 NOT NULL,
+                sys_language_uid INTEGER DEFAULT 0 NOT NULL,
+                header TEXT DEFAULT "" NOT NULL,
+                bodytext TEXT DEFAULT "" NOT NULL,
+                header_link TEXT DEFAULT "" NOT NULL,
+                tx_maitheme_link TEXT DEFAULT "" NOT NULL,
+                tx_maitheme_link_text TEXT DEFAULT "" NOT NULL,
+                tx_maitheme_link_secondary TEXT DEFAULT "" NOT NULL,
+                tx_maitheme_link_secondary_text TEXT DEFAULT "" NOT NULL,
+                l18n_parent INTEGER DEFAULT 0 NOT NULL,
+                deleted INTEGER DEFAULT 0 NOT NULL,
+                hidden INTEGER DEFAULT 0 NOT NULL,
+                tstamp INTEGER DEFAULT 0 NOT NULL
+            )
+        ');
+
+        $connection->insert('tt_content', [
+            'pid' => 1,
+            'sys_language_uid' => 0,
+            'header' => 'Bunter Tisch',
+            'bodytext' => '<p>DE body</p>',
+            'header_link' => '',
+            'tx_maitheme_link' => 't3://page?uid=8',
+            'tx_maitheme_link_text' => 'Mehr erfahren',
+            'tx_maitheme_link_secondary' => 't3://page?uid=13',
+            'tx_maitheme_link_secondary_text' => 'Jetzt mithelfen',
+            'l18n_parent' => 0,
+            'deleted' => 0,
+            'hidden' => 0,
+            'tstamp' => 1,
+        ]);
+        $sourceUid = (int) $connection->lastInsertId('tt_content');
+
+        // Incomplete overlay: translated texts present, typolinks + CTA labels missing
+        // (regression from stubs created before link fields were in the field map).
+        $connection->insert('tt_content', [
+            'pid' => 1,
+            'sys_language_uid' => 1,
+            'header' => 'Colorful Table',
+            'bodytext' => '<p>EN body</p>',
+            'header_link' => '',
+            'tx_maitheme_link' => '',
+            'tx_maitheme_link_text' => '',
+            'tx_maitheme_link_secondary' => '',
+            'tx_maitheme_link_secondary_text' => '',
+            'l18n_parent' => $sourceUid,
+            'deleted' => 0,
+            'hidden' => 0,
+            'tstamp' => 1,
+        ]);
+        $overlayUid = (int) $connection->lastInsertId('tt_content');
+
+        $fieldMapPath = $this->createTemporaryFieldMap([
+            'language_uid_map' => ['1' => 'en'],
+            'overlay_uid_offsets' => [
+                'tt_content' => ['1' => 10000],
+            ],
+            'tables' => [
+                'tt_content' => [
+                    'fields' => [
+                        'header',
+                        'bodytext',
+                        'tx_maitheme_link_text',
+                        'tx_maitheme_link_secondary_text',
+                    ],
+                    'copy_fields' => [
+                        'header_link',
+                        'tx_maitheme_link',
+                        'tx_maitheme_link_secondary',
+                    ],
+                    'parent_field' => 'l18n_parent',
+                    'uid_offset_key' => 'tt_content',
+                ],
+            ],
+        ]);
+
+        try {
+            $this->commandTester->execute([
+                '--field-map' => $fieldMapPath,
+                '--table' => 'tt_content',
+                '--language' => '1',
+                '--skip-ensure' => true,
+            ]);
+
+            self::assertSame(Command::SUCCESS, $this->commandTester->getStatusCode());
+
+            $row = $connection->select(
+                [
+                    'header',
+                    'tx_maitheme_link',
+                    'tx_maitheme_link_text',
+                    'tx_maitheme_link_secondary',
+                    'tx_maitheme_link_secondary_text',
+                ],
+                'tt_content',
+                ['uid' => $overlayUid],
+            )->fetchAssociative();
+
+            self::assertSame('Colorful Table', $row['header']);
+            self::assertSame('t3://page?uid=8', $row['tx_maitheme_link']);
+            self::assertSame('t3://page?uid=13', $row['tx_maitheme_link_secondary']);
+            self::assertSame('[DE→EN] Mehr erfahren', $row['tx_maitheme_link_text']);
+            self::assertSame('[DE→EN] Jetzt mithelfen', $row['tx_maitheme_link_secondary_text']);
         } finally {
             @unlink($fieldMapPath);
         }
