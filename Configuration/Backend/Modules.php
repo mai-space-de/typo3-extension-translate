@@ -10,7 +10,7 @@ return [
         'access' => 'admin',
         'workspaces' => 'online',
         'path' => '/module/mai-translate',
-        'iconIdentifier' => 'mai-backend-module',
+        'iconIdentifier' => 'mai-translate-module',
         'labels' => 'LLL:EXT:mai_translate/Resources/Private/Language/locallang.xlf',
         'extensionName' => 'MaiTranslate',
         'controllerActions' => [
