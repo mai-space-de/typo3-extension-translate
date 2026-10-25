@@ -31,7 +31,7 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
      * Extensions required by mai_translate for functional tests.
      */
     protected array $testExtensionsToLoad = [
-        'packages/typo3-extension-translate',
+        'maispace/mai-translate',
     ];
 
     private CommandTester $commandTester;
