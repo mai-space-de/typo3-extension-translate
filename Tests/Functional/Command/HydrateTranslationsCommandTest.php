@@ -506,6 +506,9 @@ final class HydrateTranslationsCommandTest extends FunctionalTestCase
                 l18n_parent INTEGER DEFAULT 0 NOT NULL,
                 deleted INTEGER DEFAULT 0 NOT NULL,
                 hidden INTEGER DEFAULT 0 NOT NULL,
+                starttime INTEGER DEFAULT 0 NOT NULL,
+                endtime INTEGER DEFAULT 0 NOT NULL,
+                fe_group TEXT DEFAULT "" NOT NULL,
                 tstamp INTEGER DEFAULT 0 NOT NULL
             )
         ');
