@@ -6,6 +6,7 @@ namespace Maispace\MaiTranslate\Command;
 
 use Doctrine\DBAL\ParameterType;
 use Maispace\MaiTranslate\Hydration\FalOverlaySyncService;
+use Maispace\MaiTranslate\Hydration\OverlayFieldDiff;
 use Maispace\MaiTranslate\Hydration\OverlayFieldSyncService;
 use Maispace\MaiTranslate\Hydration\OverlaySlugService;
 use Maispace\MaiTranslate\Hydration\OverlayStubService;
@@ -26,7 +27,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  *
  * Full post-translation pipeline for `sys_language_uid > 0` overlays:
  *   1. Ensure overlay stubs exist (blank text fields, copy_fields from DE)
- *   2. Translate empty translatable fields via DeepL / OpenAI
+ *   2. Translate empty, still-German and out-of-sync fields via DeepL / OpenAI
  *   3. Sync copy_fields (recurrence, dates, typolinks, …) from DE source
  *   4. Sync FAL `sys_file_reference` overlays
  *   5. Regenerate page/news/job slugs via SlugHelper
@@ -158,6 +159,15 @@ final class HydrateTranslationsCommand extends Command
         $processed = 0;
         $translated = 0;
         $skipped = 0;
+        $characters = [
+            OverlayFieldDiff::REASON_EMPTY => 0,
+            OverlayFieldDiff::REASON_STILL_GERMAN => 0,
+            OverlayFieldDiff::REASON_SOURCE_CHANGED => 0,
+            'missing-overlay' => 0,
+            'fal' => 0,
+            'force' => 0,
+        ];
+        $charactersByTable = [];
 
         foreach ($tables as $table) {
             if (!in_array($table, $fieldMap->tableNames(), true)) {
@@ -179,6 +189,7 @@ final class HydrateTranslationsCommand extends Command
                 static fn(string $f): bool => isset($columns[$f]),
             ));
             $parentField = $fieldMap->parentFieldFor($table);
+            $diffColumn = $this->diffColumn($columns);
             if (!isset($columns[$parentField])) {
                 $io->warning(sprintf('Table %s missing parent field %s — skipping.', $table, $parentField));
                 continue;
@@ -192,7 +203,7 @@ final class HydrateTranslationsCommand extends Command
                     $parentField,
                     $fields,
                     $copyFields,
-                    $force,
+                    $diffColumn,
                     $limit !== null ? $limit - $processed : null,
                 );
 
@@ -209,15 +220,25 @@ final class HydrateTranslationsCommand extends Command
                         continue;
                     }
 
+                    $snapshot = OverlayFieldDiff::decode($diffColumn === null ? null : ($overlay[$diffColumn] ?? null));
                     $updates = [];
                     foreach ($fields as $field) {
-                        if (!$force && isset($overlay[$field]) && $overlay[$field] !== '' && $overlay[$field] !== '0') {
-                            continue;
-                        }
                         $sourceValue = (string) ($sourceRow[$field] ?? '');
-                        if ($sourceValue === '') {
-                            continue;
+                        if ($force) {
+                            if ($sourceValue === '') {
+                                continue;
+                            }
+                            $reason = 'force';
+                        } else {
+                            $reason = OverlayFieldDiff::reason($sourceValue, $overlay[$field] ?? '', $snapshot, $field);
+                            if ($reason === null) {
+                                continue;
+                            }
                         }
+
+                        $fieldCharacters = OverlayFieldDiff::characters($sourceValue);
+                        $characters[$reason] += $fieldCharacters;
+                        $charactersByTable[$table] = ($charactersByTable[$table] ?? 0) + $fieldCharacters;
 
                         if ($dryRun) {
                             $updates[$field] = $sourceValue;
@@ -235,24 +256,29 @@ final class HydrateTranslationsCommand extends Command
                         );
                     }
 
-                    foreach ($copyFields as $field) {
-                        if (!array_key_exists($field, $sourceRow)) {
-                            continue;
+                    if ($updates !== []) {
+                        foreach ($copyFields as $field) {
+                            if (!array_key_exists($field, $sourceRow)) {
+                                continue;
+                            }
+                            $updates[$field] = $sourceRow[$field];
                         }
-                        $updates[$field] = $sourceRow[$field];
                     }
 
                     if ($updates === []) {
                         $skipped++;
-                        continue;
+                    } else {
+                        if (!$dryRun) {
+                            $this->connectionPool
+                                ->getConnectionForTable($table)
+                                ->update($table, $updates, ['uid' => (int) $overlay['uid']]);
+                        }
+                        $translated++;
                     }
 
                     if (!$dryRun) {
-                        $this->connectionPool
-                            ->getConnectionForTable($table)
-                            ->update($table, $updates, ['uid' => (int) $overlay['uid']]);
+                        $this->writeSnapshot($table, (int) $overlay['uid'], $diffColumn, $snapshot, $sourceRow, $fields);
                     }
-                    $translated++;
 
                     if ($limit !== null && $processed >= $limit) {
                         break 3;
@@ -268,6 +294,19 @@ final class HydrateTranslationsCommand extends Command
             $skipped,
         ));
 
+        if ($dryRun && !$skipEnsure) {
+            $missing = $this->overlayStubService->estimateMissingOverlayCharacters($fieldMap, $tables, $targetLanguages);
+            $characters['missing-overlay'] += $missing['characters'];
+            foreach ($missing['byTable'] as $table => $tableCharacters) {
+                $charactersByTable[$table] = ($charactersByTable[$table] ?? 0) + $tableCharacters;
+            }
+            $io->writeln(sprintf(
+                'Missing overlays: %d record(s), %d character(s).',
+                $missing['records'],
+                $missing['characters'],
+            ));
+        }
+
         if (!$skipFinalize) {
             $synced = $this->overlayFieldSyncService->syncCopyFields($fieldMap, $tables, $targetLanguages, $dryRun);
             $fal = $this->falOverlaySyncService->syncFalOverlays($fieldMap, $tables, $targetLanguages, $dryRun);
@@ -280,6 +319,18 @@ final class HydrateTranslationsCommand extends Command
                 $dryRun ? ' (dry-run)' : '',
             ));
         }
+
+        $this->translateFalTexts(
+            $fieldMap,
+            $tables,
+            $targetLanguages,
+            $sourceLanguage,
+            $dryRun,
+            $characters,
+            $charactersByTable,
+            $io,
+        );
+        $this->reportCharacters($characters, $charactersByTable, $io);
 
         $io->success('hydrate-overlays finished.');
 
@@ -307,32 +358,24 @@ final class HydrateTranslationsCommand extends Command
         string $parentField,
         array $fields,
         array $copyFields,
-        bool $force,
+        ?string $diffColumn,
         ?int $limit,
     ): array {
+        $select = ['uid', 'sys_language_uid', $parentField, ...$fields, ...$copyFields];
+        if ($diffColumn !== null) {
+            $select[] = $diffColumn;
+        }
+
         $connection = $this->connectionPool->getQueryBuilderForTable($table);
         $connection->getRestrictions()->removeAll();
         $query = $connection
-            ->select(...array_values(array_unique(['uid', 'sys_language_uid', $parentField, ...$fields, ...$copyFields])))
+            ->select(...array_values(array_unique($select)))
             ->from($table)
             ->where(
                 $connection->expr()->eq('sys_language_uid', $connection->createNamedParameter($languageUid, ParameterType::INTEGER)),
                 $connection->expr()->gt($parentField, $connection->createNamedParameter(0, ParameterType::INTEGER)),
             )
             ->orderBy('uid', 'ASC');
-
-        if (!$force) {
-            $blankPredicates = [];
-            foreach ($fields as $field) {
-                $blankPredicates[] = $connection->expr()->or(
-                    $connection->expr()->isNull($field),
-                    $connection->expr()->eq($field, $connection->createNamedParameter('')),
-                );
-            }
-            if ($blankPredicates !== []) {
-                $query->andWhere($connection->expr()->or(...$blankPredicates));
-            }
-        }
 
         if ($limit !== null && $limit > 0) {
             $query->setMaxResults($limit);
@@ -363,6 +406,172 @@ final class HydrateTranslationsCommand extends Command
             ->fetchAssociative();
 
         return $row === false ? null : $row;
+    }
+
+    /**
+     * @param array<string, true> $columns
+     */
+    private function diffColumn(array $columns): ?string
+    {
+        if (isset($columns['l18n_diffsource'])) {
+            return 'l18n_diffsource';
+        }
+        if (isset($columns['l10n_diffsource'])) {
+            return 'l10n_diffsource';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     * @param array<string, mixed> $sourceRow
+     * @param list<string> $fields
+     */
+    private function writeSnapshot(
+        string $table,
+        int $overlayUid,
+        ?string $diffColumn,
+        array $snapshot,
+        array $sourceRow,
+        array $fields,
+    ): void {
+        if ($diffColumn === null || $overlayUid <= 0) {
+            return;
+        }
+
+        $sourceFields = [];
+        foreach ($fields as $field) {
+            $sourceFields[$field] = (string) ($sourceRow[$field] ?? '');
+        }
+        $merged = OverlayFieldDiff::withSourceValues($snapshot, $sourceFields);
+        if (!$merged['changed']) {
+            return;
+        }
+
+        try {
+            $encoded = json_encode($merged['snapshot'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return;
+        }
+
+        $this->connectionPool->getConnectionForTable($table)->update(
+            $table,
+            [$diffColumn => $encoded],
+            ['uid' => $overlayUid],
+        );
+    }
+
+    /**
+     * @param array<string, int> $characters
+     * @param array<string, int> $charactersByTable
+     * @param list<string> $tables
+     * @param list<int> $targetLanguages
+     */
+    private function translateFalTexts(
+        TranslationFieldMap $fieldMap,
+        array $tables,
+        array $targetLanguages,
+        string $sourceLanguage,
+        bool $dryRun,
+        array &$characters,
+        array &$charactersByTable,
+        SymfonyStyle $io,
+    ): void {
+        $jobs = $this->falOverlaySyncService->collectTextJobs($fieldMap, $tables, $targetLanguages, $dryRun);
+        $snapshots = [];
+
+        foreach ($jobs as $job) {
+            $fieldCharacters = OverlayFieldDiff::characters($job['text']);
+            $characters['fal'] += $fieldCharacters;
+            $charactersByTable['sys_file_reference'] = ($charactersByTable['sys_file_reference'] ?? 0) + $fieldCharacters;
+            if ($dryRun || $job['uid'] <= 0) {
+                continue;
+            }
+
+            $translatedText = $this->translationService->translate(
+                text: $job['text'],
+                sourceLanguage: $sourceLanguage,
+                targetLanguage: $fieldMap->isoCodeFor($job['languageUid']),
+                recordTable: 'sys_file_reference',
+                recordUid: $job['uid'],
+                field: $job['field'],
+                maxLength: TranslationLengthGuard::NO_LIMIT,
+            );
+            $this->connectionPool->getConnectionForTable('sys_file_reference')->update(
+                'sys_file_reference',
+                [$job['field'] => $translatedText],
+                ['uid' => $job['uid']],
+            );
+            $snapshots[$job['uid']][$job['field']] = $job['text'];
+        }
+
+        if (!$dryRun) {
+            $this->writeFalSnapshots($snapshots);
+        }
+
+        $io->writeln(sprintf('File references: %d text field(s), %d character(s).', count($jobs), $characters['fal']));
+    }
+
+    /**
+     * @param array<int, array<string, string>> $snapshots
+     */
+    private function writeFalSnapshots(array $snapshots): void
+    {
+        if ($snapshots === [] || !$this->tableExists('sys_file_reference')) {
+            return;
+        }
+
+        $diffColumn = $this->diffColumn($this->tableColumns('sys_file_reference'));
+        if ($diffColumn === null) {
+            return;
+        }
+
+        $connection = $this->connectionPool->getConnectionForTable('sys_file_reference');
+        foreach ($snapshots as $uid => $fields) {
+            $qb = $this->connectionPool->getQueryBuilderForTable('sys_file_reference');
+            $qb->getRestrictions()->removeAll();
+            $raw = $qb->select($diffColumn)
+                ->from('sys_file_reference')
+                ->where($qb->expr()->eq('uid', $qb->createNamedParameter($uid, ParameterType::INTEGER)))
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchOne();
+            $merged = OverlayFieldDiff::withSourceValues(OverlayFieldDiff::decode($raw === false ? null : $raw), $fields);
+            if (!$merged['changed']) {
+                continue;
+            }
+            try {
+                $encoded = json_encode($merged['snapshot'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                continue;
+            }
+            $connection->update('sys_file_reference', [$diffColumn => $encoded], ['uid' => $uid]);
+        }
+    }
+
+    /**
+     * @param array<string, int> $characters
+     * @param array<string, int> $charactersByTable
+     */
+    private function reportCharacters(array $characters, array $charactersByTable, SymfonyStyle $io): void
+    {
+        $total = array_sum($characters);
+        $io->writeln(sprintf('Characters to translate: %d', $total));
+        $io->writeln(sprintf('  empty fields: %d', $characters[OverlayFieldDiff::REASON_EMPTY]));
+        $io->writeln(sprintf('  still German: %d', $characters[OverlayFieldDiff::REASON_STILL_GERMAN]));
+        $io->writeln(sprintf('  source changed: %d', $characters[OverlayFieldDiff::REASON_SOURCE_CHANGED]));
+        $io->writeln(sprintf('  missing overlays: %d', $characters['missing-overlay']));
+        $io->writeln(sprintf('  file references: %d', $characters['fal']));
+        if ($characters['force'] > 0) {
+            $io->writeln(sprintf('  forced: %d', $characters['force']));
+        }
+        ksort($charactersByTable);
+        foreach ($charactersByTable as $table => $tableCharacters) {
+            if ($tableCharacters > 0) {
+                $io->writeln(sprintf('  %s: %d', $table, $tableCharacters));
+            }
+        }
     }
 
     private function tableExists(string $table): bool

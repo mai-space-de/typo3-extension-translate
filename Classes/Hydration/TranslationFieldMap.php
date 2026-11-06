@@ -30,7 +30,9 @@ final class TranslationFieldMap
      *     parent_field: string,
      *     uid_offset_key: string,
      *     regenerate_slug: bool,
-     *     fal: list<array{fieldname: string, count_field: string}>
+     *     fal: list<array{fieldname: string, count_field: string}>,
+     *     fal_text_fields: list<string>|null,
+     *     foreign_pointers: list<array{field: string, foreign_table: string, foreign_parent_field: string}>
      * }> $tables
      * @param array<string, array<int, int>> $overlayUidOffsets per uid_offset_key + language uid → offset
      */
@@ -158,6 +160,11 @@ final class TranslationFieldMap
                 ];
             }
 
+            $foreignPointers = self::normaliseForeignPointers($tableName, $spec['foreign_pointers'] ?? []);
+            $falTextFields = array_key_exists('fal_text_fields', $spec)
+                ? self::normaliseStringList($tableName, 'fal_text_fields', $spec['fal_text_fields'])
+                : null;
+
             $normalisedTables[$tableName] = [
                 'fields' => array_values(array_map('strval', $fields)),
                 'copy_fields' => array_values(array_map('strval', $copyFields)),
@@ -165,6 +172,8 @@ final class TranslationFieldMap
                 'uid_offset_key' => $offsetKey,
                 'regenerate_slug' => (bool) ($spec['regenerate_slug'] ?? false),
                 'fal' => $fal,
+                'fal_text_fields' => $falTextFields,
+                'foreign_pointers' => $foreignPointers,
             ];
         }
 
@@ -221,6 +230,32 @@ final class TranslationFieldMap
         return $this->tableSpec($table)['fal'];
     }
 
+    /**
+     * Text columns on `sys_file_reference` that are translated with the parent record.
+     * Tables with FAL specs default to alternative, title and description.
+     *
+     * @return list<string>
+     */
+    public function falTextFieldsFor(string $table): array
+    {
+        $spec = $this->tableSpec($table);
+        if ($spec['fal'] === []) {
+            return [];
+        }
+
+        return $spec['fal_text_fields'] ?? ['alternative', 'title', 'description'];
+    }
+
+    /**
+     * Columns that must point at the translated foreign row, not the German one.
+     *
+     * @return list<array{field: string, foreign_table: string, foreign_parent_field: string}>
+     */
+    public function foreignPointersFor(string $table): array
+    {
+        return $this->tableSpec($table)['foreign_pointers'];
+    }
+
     public function isoCodeFor(int $languageUid): string
     {
         if (!isset($this->languageUidMap[$languageUid])) {
@@ -248,7 +283,9 @@ final class TranslationFieldMap
      *     parent_field: string,
      *     uid_offset_key: string,
      *     regenerate_slug: bool,
-     *     fal: list<array{fieldname: string, count_field: string}>
+     *     fal: list<array{fieldname: string, count_field: string}>,
+     *     fal_text_fields: list<string>|null,
+     *     foreign_pointers: list<array{field: string, foreign_table: string, foreign_parent_field: string}>
      * }
      */
     private function tableSpec(string $table): array
@@ -258,5 +295,60 @@ final class TranslationFieldMap
         }
 
         return $this->tables[$table];
+    }
+
+    /**
+     * @return list<array{field: string, foreign_table: string, foreign_parent_field: string}>
+     */
+    private static function normaliseForeignPointers(string $tableName, mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            throw new RuntimeException(sprintf(
+                'translatable_fields.tables.%s.foreign_pointers must be a list when set.',
+                $tableName,
+            ));
+        }
+
+        $pointers = [];
+        foreach ($raw as $pointer) {
+            if (!is_array($pointer)) {
+                throw new RuntimeException(sprintf(
+                    'translatable_fields.tables.%s.foreign_pointers entries must be objects.',
+                    $tableName,
+                ));
+            }
+            $field = (string) ($pointer['field'] ?? '');
+            $foreignTable = (string) ($pointer['foreign_table'] ?? '');
+            $foreignParentField = (string) ($pointer['foreign_parent_field'] ?? '');
+            if ($field === '' || $foreignTable === '' || $foreignParentField === '') {
+                throw new RuntimeException(sprintf(
+                    'translatable_fields.tables.%s.foreign_pointers entries need field, foreign_table and foreign_parent_field.',
+                    $tableName,
+                ));
+            }
+            $pointers[] = [
+                'field' => $field,
+                'foreign_table' => $foreignTable,
+                'foreign_parent_field' => $foreignParentField,
+            ];
+        }
+
+        return $pointers;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function normaliseStringList(string $tableName, string $key, mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            throw new RuntimeException(sprintf(
+                'translatable_fields.tables.%s.%s must be a list when set.',
+                $tableName,
+                $key,
+            ));
+        }
+
+        return array_values(array_map('strval', $raw));
     }
 }

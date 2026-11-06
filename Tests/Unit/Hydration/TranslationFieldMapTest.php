@@ -65,6 +65,8 @@ final class TranslationFieldMapTest extends TestCase
 
         self::assertSame([], $map->copyFieldsFor('tt_content'));
         self::assertSame([], $map->falSpecsFor('tt_content'));
+        self::assertSame([], $map->falTextFieldsFor('tt_content'));
+        self::assertSame([], $map->foreignPointersFor('tt_content'));
         self::assertFalse($map->shouldRegenerateSlug('tt_content'));
     }
 
@@ -77,6 +79,13 @@ final class TranslationFieldMapTest extends TestCase
         $registry['tables']['tt_content']['fal'] = [
             ['fieldname' => 'image', 'count_field' => 'image'],
         ];
+        $registry['tables']['tt_content']['foreign_pointers'] = [
+            [
+                'field' => 'parent_uid',
+                'foreign_table' => 'tt_content',
+                'foreign_parent_field' => 'l18n_parent',
+            ],
+        ];
 
         $map = TranslationFieldMap::fromArray($registry);
 
@@ -85,6 +94,15 @@ final class TranslationFieldMapTest extends TestCase
         self::assertSame(
             [['fieldname' => 'image', 'count_field' => 'image']],
             $map->falSpecsFor('tt_content'),
+        );
+        self::assertSame(['alternative', 'title', 'description'], $map->falTextFieldsFor('tt_content'));
+        self::assertSame(
+            [[
+                'field' => 'parent_uid',
+                'foreign_table' => 'tt_content',
+                'foreign_parent_field' => 'l18n_parent',
+            ]],
+            $map->foreignPointersFor('tt_content'),
         );
     }
 
@@ -228,5 +246,29 @@ final class TranslationFieldMapTest extends TestCase
         self::assertContains('tx_maitheme_link_secondary_text', $fields);
         self::assertNotContains('tx_maitheme_link', $fields);
         self::assertNotContains('tx_maitheme_link_text', $copyFields);
+        self::assertContains('tx_maievents_location', $map->fieldsFor('pages'));
+        self::assertContains('abstract', $map->fieldsFor('pages'));
+        self::assertContains('tx_mainews_teaser', $map->fieldsFor('pages'));
+        self::assertContains('tx_maimember_position', $map->fieldsFor('pages'));
+        self::assertContains('tx_maievents_start_date', $map->copyFieldsFor('pages'));
+        self::assertContains('tx_mainews_date', $map->copyFieldsFor('pages'));
+        self::assertContains('tx_maimember_last_name', $map->copyFieldsFor('pages'));
+        self::assertContains(
+            ['fieldname' => 'tx_maiseo_og_image', 'count_field' => 'tx_maiseo_og_image'],
+            $map->falSpecsFor('pages'),
+        );
+        self::assertSame(
+            [[
+                'field' => 'parent_uid',
+                'foreign_table' => 'tt_content',
+                'foreign_parent_field' => 'l18n_parent',
+            ]],
+            $map->foreignPointersFor('tx_maitheme_accordion_item'),
+        );
+        self::assertNotContains('parent_uid', $map->copyFieldsFor('tx_maitheme_accordion_item'));
+        self::assertSame(
+            ['alternative', 'title', 'description'],
+            $map->falTextFieldsFor('tx_maitheme_slider_item'),
+        );
     }
 }

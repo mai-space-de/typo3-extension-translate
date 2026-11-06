@@ -50,12 +50,23 @@ final class OverlayFieldSyncService
                 $fieldMap->copyFieldsFor($table),
                 static fn(string $f): bool => isset($columns[$f]),
             ));
-            if ($copyFields === [] || !isset($columns[$parentField])) {
+            $pointers = array_values(array_filter(
+                $fieldMap->foreignPointersFor($table),
+                static fn(array $pointer): bool => isset($columns[$pointer['field']]),
+            ));
+            if (($copyFields === [] && $pointers === []) || !isset($columns[$parentField])) {
                 continue;
             }
 
+            $pointerFields = array_map(
+                static fn(array $pointer): string => $pointer['field'],
+                $pointers,
+            );
+            $selectedFields = array_values(array_unique([...$copyFields, ...$pointerFields]));
+            $pointerResolver = new ForeignPointerResolver($this->connectionPool);
+
             foreach ($languageUids as $languageUid) {
-                $overlays = $this->findOverlays($table, $parentField, $languageUid, $copyFields, isset($columns['deleted']));
+                $overlays = $this->findOverlays($table, $parentField, $languageUid, $selectedFields, isset($columns['deleted']));
                 $connection = $this->connectionPool->getConnectionForTable($table);
 
                 foreach ($overlays as $overlay) {
@@ -63,7 +74,7 @@ final class OverlayFieldSyncService
                     if ($sourceUid <= 0) {
                         continue;
                     }
-                    $source = $this->findSource($table, $sourceUid, $copyFields);
+                    $source = $this->findSource($table, $sourceUid, $selectedFields);
                     if ($source === null) {
                         continue;
                     }
@@ -74,6 +85,20 @@ final class OverlayFieldSyncService
                         $ovVal = $overlay[$field] ?? null;
                         if ($srcVal !== $ovVal) {
                             $updates[$field] = $srcVal;
+                        }
+                    }
+                    foreach ($pointers as $pointer) {
+                        $resolved = $pointerResolver->resolve(
+                            $pointer,
+                            (int) ($source[$pointer['field']] ?? 0),
+                            $languageUid,
+                        );
+                        $current = (int) ($overlay[$pointer['field']] ?? 0);
+                        $germanUid = (int) ($source[$pointer['field']] ?? 0);
+                        if ($resolved > 0 && $resolved !== $current) {
+                            $updates[$pointer['field']] = $resolved;
+                        } elseif ($resolved === 0 && $germanUid > 0 && $current === $germanUid) {
+                            $updates[$pointer['field']] = 0;
                         }
                     }
                     if ($updates === []) {

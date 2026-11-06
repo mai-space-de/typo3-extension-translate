@@ -61,10 +61,20 @@ final class OverlayStubService
                 $fieldMap->copyFieldsFor($table),
                 static fn(string $f): bool => isset($columns[$f]),
             ));
+            $pointers = array_values(array_filter(
+                $fieldMap->foreignPointersFor($table),
+                static fn(array $pointer): bool => isset($columns[$pointer['field']]),
+            ));
             $selectCopy = $copyFields;
+            foreach ($pointers as $pointer) {
+                if (!in_array($pointer['field'], $selectCopy, true)) {
+                    $selectCopy[] = $pointer['field'];
+                }
+            }
             if (isset($columns['slug']) && !in_array('slug', $selectCopy, true)) {
                 $selectCopy[] = 'slug';
             }
+            $pointerResolver = new ForeignPointerResolver($this->connectionPool);
 
             $sources = $this->findSourceRows($table, $selectCopy, isset($columns['deleted']));
             $existing = $this->existingOverlayParents($table, $parentField, $languageUids, isset($columns['deleted']));
@@ -108,6 +118,13 @@ final class OverlayStubService
                     foreach ($fields as $field) {
                         $row[$field] = '';
                     }
+                    foreach ($pointers as $pointer) {
+                        $row[$pointer['field']] = $pointerResolver->resolve(
+                            $pointer,
+                            (int) ($source[$pointer['field']] ?? 0),
+                            $languageUid,
+                        );
+                    }
                     if ($table === 'pages' && isset($columns['slug']) && isset($source['slug'])) {
                         $row['slug'] = $source['slug'];
                     }
@@ -121,6 +138,83 @@ final class OverlayStubService
         }
 
         return $created;
+    }
+
+    /**
+     * Characters in translatable fields of German rows that have no overlay yet.
+     * Dry-run does not insert those stubs, so the translate loop cannot see them.
+     *
+     * @param list<string> $tables
+     * @param list<int>    $languageUids
+     *
+     * @return array{characters: int, records: int, byTable: array<string, int>}
+     */
+    public function estimateMissingOverlayCharacters(
+        TranslationFieldMap $fieldMap,
+        array $tables,
+        array $languageUids,
+    ): array {
+        $characters = 0;
+        $records = 0;
+        $byTable = [];
+
+        foreach ($tables as $table) {
+            if (!in_array($table, $fieldMap->tableNames(), true) || !$this->tableExists($table)) {
+                continue;
+            }
+
+            $columns = $this->tableColumns($table);
+            $parentField = $fieldMap->parentFieldFor($table);
+            if (!isset($columns[$parentField])) {
+                continue;
+            }
+
+            $fields = array_values(array_filter(
+                $fieldMap->fieldsFor($table),
+                static fn(string $f): bool => isset($columns[$f]),
+            ));
+            if ($fields === []) {
+                continue;
+            }
+
+            $sources = $this->findSourceRows($table, $fields, isset($columns['deleted']));
+            $existing = $this->existingOverlayParents($table, $parentField, $languageUids, isset($columns['deleted']));
+            $tableCharacters = 0;
+
+            foreach ($sources as $source) {
+                $recordCharacters = 0;
+                foreach ($fields as $field) {
+                    $value = (string) ($source[$field] ?? '');
+                    if ($value === '') {
+                        continue;
+                    }
+                    $recordCharacters += OverlayFieldDiff::characters($value);
+                }
+                if ($recordCharacters === 0) {
+                    continue;
+                }
+
+                $sourceUid = (int) $source['uid'];
+                foreach ($languageUids as $languageUid) {
+                    if (isset($existing[$sourceUid][$languageUid])) {
+                        continue;
+                    }
+                    $characters += $recordCharacters;
+                    $tableCharacters += $recordCharacters;
+                    $records++;
+                }
+            }
+
+            if ($tableCharacters > 0) {
+                $byTable[$table] = $tableCharacters;
+            }
+        }
+
+        return [
+            'characters' => $characters,
+            'records' => $records,
+            'byTable' => $byTable,
+        ];
     }
 
     /**
