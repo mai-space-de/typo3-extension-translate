@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maispace\MaiTranslate\Command;
 
 use Doctrine\DBAL\ParameterType;
+use Maispace\MaiTranslate\Hydration\FalFieldDiscovery;
 use Maispace\MaiTranslate\Hydration\FalOverlaySyncService;
 use Maispace\MaiTranslate\Hydration\OverlayFieldDiff;
 use Maispace\MaiTranslate\Hydration\OverlayFieldSyncService;
@@ -21,6 +22,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * CLI: `vendor/bin/typo3 mai_translate:hydrate-overlays`
@@ -32,7 +34,11 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  *   4. Sync FAL `sys_file_reference` overlays
  *   5. Regenerate page/news/job slugs via SlugHelper
  *
- * Field map: `scripts/hydration/schema/hydration-v1.json` (`translatable_fields`).
+ * Field map: `scripts/hydration/schema/hydration-v1.json` when that file exists,
+ * otherwise the copy shipped with this extension. TCA `type=file` columns of the
+ * mapped tables are added to the fal list, so a new file field does not need a
+ * manual entry. Replacing the file on an existing German reference (same uid,
+ * new uid_local) is not copied onto an overlay that already exists.
  */
 #[AsCommand(
     name: 'mai_translate:hydrate-overlays',
@@ -48,6 +54,7 @@ final class HydrateTranslationsCommand extends Command
         private readonly OverlayStubService $overlayStubService,
         private readonly OverlayFieldSyncService $overlayFieldSyncService,
         private readonly FalOverlaySyncService $falOverlaySyncService,
+        private readonly FalFieldDiscovery $falFieldDiscovery,
         private readonly OverlaySlugService $overlaySlugService,
     ) {
         parent::__construct();
@@ -127,6 +134,9 @@ final class HydrateTranslationsCommand extends Command
         try {
             $fieldMapPath = $this->resolveFieldMapPath((string) ($input->getOption('field-map') ?? ''));
             $fieldMap = TranslationFieldMap::fromFile($fieldMapPath);
+            $fieldMap = $fieldMap->withAdditionalFalSpecs(
+                $this->falFieldDiscovery->fileFieldsForTables($GLOBALS['TCA'] ?? [], $fieldMap->tableNames()),
+            );
         } catch (\RuntimeException $exception) {
             $io->error($exception->getMessage());
 
@@ -343,7 +353,14 @@ final class HydrateTranslationsCommand extends Command
             return $override;
         }
 
-        return Environment::getProjectPath() . '/scripts/hydration/schema/hydration-v1.json';
+        $projectPath = Environment::getProjectPath() . '/scripts/hydration/schema/hydration-v1.json';
+        if (is_file($projectPath)) {
+            return $projectPath;
+        }
+
+        return GeneralUtility::getFileAbsFileName(
+            'EXT:mai_translate/Resources/Private/Schema/translatable-fields.json',
+        );
     }
 
     /**

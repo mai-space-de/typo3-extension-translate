@@ -231,6 +231,39 @@ final class TranslationFieldMap
     }
 
     /**
+     * Ergänzt die von Hand gepflegte fal-Liste um Dateifelder aus der TCA.
+     * Ein bereits eingetragener Feldname bleibt unverändert.
+     *
+     * @param array<string, list<array{fieldname: string, count_field: string}>> $discovered
+     */
+    public function withAdditionalFalSpecs(array $discovered): self
+    {
+        $tables = $this->tables;
+        foreach ($discovered as $table => $specs) {
+            if (!isset($tables[$table])) {
+                continue;
+            }
+            $known = [];
+            foreach ($tables[$table]['fal'] as $spec) {
+                $known[$spec['fieldname']] = true;
+            }
+            foreach ($specs as $spec) {
+                if ($spec['fieldname'] === '' || isset($known[$spec['fieldname']])) {
+                    continue;
+                }
+                $tables[$table]['fal'][] = $spec;
+                $known[$spec['fieldname']] = true;
+            }
+        }
+
+        return new self(
+            languageUidMap: $this->languageUidMap,
+            tables: $tables,
+            overlayUidOffsets: $this->overlayUidOffsets,
+        );
+    }
+
+    /**
      * Text columns on `sys_file_reference` that are translated with the parent record.
      * Tables with FAL specs default to alternative, title and description.
      *

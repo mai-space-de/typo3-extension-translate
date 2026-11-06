@@ -96,7 +96,7 @@ final class FalOverlaySyncService
                         $created++;
                         if (!$dryRun) {
                             $falConnection->insert('sys_file_reference', $row);
-                            $this->bumpCountField($table, $overlayUid, $countField);
+                            $this->bumpCountField($table, $overlayUid, $fieldname, $countField);
                         }
                         $existing[(int) $ref['uid']][$languageUid] = true;
                     }
@@ -324,7 +324,7 @@ final class FalOverlaySyncService
         return $uid === false ? null : (int) $uid;
     }
 
-    private function bumpCountField(string $table, int $overlayUid, string $countField): void
+    private function bumpCountField(string $table, int $overlayUid, string $fieldname, string $countField): void
     {
         $columns = $this->tableColumns($table);
         if (!isset($columns[$countField])) {
@@ -338,6 +338,7 @@ final class FalOverlaySyncService
             ->where(
                 $qb->expr()->eq('uid_foreign', $qb->createNamedParameter($overlayUid, ParameterType::INTEGER)),
                 $qb->expr()->eq('tablenames', $qb->createNamedParameter($table)),
+                $qb->expr()->eq('fieldname', $qb->createNamedParameter($fieldname)),
                 $qb->expr()->eq('deleted', $qb->createNamedParameter(0, ParameterType::INTEGER)),
             )
             ->executeQuery()

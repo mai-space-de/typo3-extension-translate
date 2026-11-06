@@ -1,0 +1,426 @@
+{
+  "translatable_fields": {
+    "description": "Field map consumed by hydrate-13 (overlay generation) and mai_translate:hydrate-overlays. `fields` = translate; `copy_fields` = copy 1:1 from DE; `fal` = extra sys_file_reference specs. The hydrate command also reads TCA type=file columns of these tables, so a new file field does not need a manual fal entry. `regenerate_slug` = SlugHelper after translation. Excludes proper nouns from fields.",
+    "consumers": [
+      "scripts/hydration/generate-translation-overlays.py",
+      "packages/typo3-extension-translate/Classes/Command/HydrateTranslationsCommand.php"
+    ],
+    "language_uid_map": {
+      "1": "en",
+      "2": "uk",
+      "3": "ar"
+    },
+    "overlay_uid_offsets": {
+      "description": "Offsets added to the default-language source UID to derive overlay UIDs. Keep per-table offset > observed max source UID to avoid collisions.",
+      "pages": {
+        "1": 100,
+        "2": 200,
+        "3": 300
+      },
+      "tt_content": {
+        "1": 10000,
+        "2": 20000,
+        "3": 30000
+      },
+      "domain_records": {
+        "1": 1000,
+        "2": 2000,
+        "3": 3000
+      }
+    },
+    "tables": {
+      "pages": {
+        "fields": [
+          "title",
+          "nav_title",
+          "subtitle",
+          "abstract",
+          "tx_maievents_location",
+          "tx_mainews_teaser",
+          "tx_maimember_position"
+        ],
+        "copy_fields": [
+          "pid",
+          "doktype",
+          "sorting",
+          "hidden",
+          "nav_hide",
+          "is_siteroot",
+          "backend_layout",
+          "backend_layout_next_level",
+          "media",
+          "module",
+          "tx_maievents_start_date",
+          "tx_maievents_end_date",
+          "tx_maievents_recurrence_frequency",
+          "tx_maievents_recurrence_until",
+          "tx_maievents_recurrence_month_weekday",
+          "tx_mainews_date",
+          "tx_maimember_first_name",
+          "tx_maimember_last_name",
+          "tx_maimember_email",
+          "tx_maimember_phone",
+          "tx_maimember_status",
+          "tx_maimember_join_date",
+          "tx_maimember_fe_user"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "pages",
+        "regenerate_slug": true,
+        "fal": [
+          {
+            "fieldname": "tx_maimember_image",
+            "count_field": "tx_maimember_image"
+          },
+          {
+            "fieldname": "tx_mainews_images",
+            "count_field": "tx_mainews_images"
+          },
+          {
+            "fieldname": "tx_maiseo_og_image",
+            "count_field": "tx_maiseo_og_image"
+          }
+        ],
+        "notes": "Titles, abstracts, news teasers, event locations and member roles are translated. Event dates, news dates and member names are copied. Slugs via SlugHelper."
+      },
+      "tt_content": {
+        "fields": [
+          "header",
+          "subheader",
+          "bodytext",
+          "tx_maitheme_link_text",
+          "tx_maitheme_link_secondary_text",
+          "tx_maitheme_eyebrow",
+          "tx_maitheme_badge_text"
+        ],
+        "copy_fields": [
+          "pid",
+          "sorting",
+          "hidden",
+          "CType",
+          "colPos",
+          "layout",
+          "frame_class",
+          "space_before_class",
+          "space_after_class",
+          "header_layout",
+          "header_position",
+          "date",
+          "imagecols",
+          "imageorient",
+          "imagewidth",
+          "imageheight",
+          "imageborder",
+          "list_type",
+          "pages",
+          "recursive",
+          "selected_categories",
+          "category_field",
+          "records",
+          "header_link",
+          "tx_maitheme_link",
+          "tx_maitheme_link_secondary",
+          "tx_maitheme_icon_identifier",
+          "tx_maitheme_icon_size",
+          "tx_maitheme_accent",
+          "tx_maitheme_variant",
+          "tx_maitheme_video_youtube_id",
+          "pi_flexform"
+        ],
+        "parent_field": "l18n_parent",
+        "uid_offset_key": "tt_content",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ],
+        "notes": "tt_content uses l18n_parent (legacy column name). alternative/title/description live on sys_file_reference and are translated with the parent. Typolink targets + icon/accent + pi_flexform are copy_fields (TCA l10n_mode=exclude where applicable); CTA labels and hero eyebrow/badge are translated."
+      },
+      "tx_maitheme_accordion_item": {
+        "fields": [
+          "question",
+          "answer"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "sort"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records",
+        "foreign_pointers": [
+          {
+            "field": "parent_uid",
+            "foreign_table": "tt_content",
+            "foreign_parent_field": "l18n_parent"
+          }
+        ],
+        "notes": "parent_uid points at the translated tt_content row, not the German content element."
+      },
+      "tx_maitheme_tab_item": {
+        "fields": [
+          "tab_title",
+          "content"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "sort"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records",
+        "foreign_pointers": [
+          {
+            "field": "parent_uid",
+            "foreign_table": "tt_content",
+            "foreign_parent_field": "l18n_parent"
+          }
+        ]
+      },
+      "tx_maitheme_slider_item": {
+        "fields": [
+          "headline",
+          "bodytext"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "sort",
+          "link"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ],
+        "foreign_pointers": [
+          {
+            "field": "parent_uid",
+            "foreign_table": "tt_content",
+            "foreign_parent_field": "l18n_parent"
+          }
+        ]
+      },
+      "tx_maitheme_timeline_item": {
+        "fields": [
+          "title",
+          "description"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "sort",
+          "event_date"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ],
+        "foreign_pointers": [
+          {
+            "field": "parent_uid",
+            "foreign_table": "tt_content",
+            "foreign_parent_field": "l18n_parent"
+          }
+        ]
+      },
+      "tx_maitimeline_item": {
+        "fields": [
+          "title",
+          "description"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "sort",
+          "event_date"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ],
+        "foreign_pointers": [
+          {
+            "field": "parent_uid",
+            "foreign_table": "tt_content",
+            "foreign_parent_field": "l18n_parent"
+          }
+        ]
+      },
+      "tx_maievents_event": {
+        "fields": [
+          "title",
+          "description",
+          "location"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "start_date",
+          "end_date",
+          "registration_deadline",
+          "max_attendees",
+          "has_waiting_list",
+          "image",
+          "categories",
+          "link",
+          "recurrence_frequency",
+          "recurrence_until",
+          "recurrence_month_weekday"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ]
+      },
+      "tx_maifaq_faq": {
+        "fields": [
+          "question",
+          "answer"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "categories"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records"
+      },
+      "tx_maijobs_job": {
+        "fields": [
+          "title",
+          "description",
+          "requirements"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "deadline",
+          "status",
+          "categories"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records",
+        "regenerate_slug": true
+      },
+      "tx_mainews_news": {
+        "fields": [
+          "title",
+          "teaser",
+          "body"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "date",
+          "images",
+          "categories",
+          "tags"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records",
+        "regenerate_slug": true,
+        "fal": [
+          {
+            "fieldname": "images",
+            "count_field": "images"
+          }
+        ],
+        "notes": "mai_base LocalizationTrait uses l10n_source as transOrigPointerField. Slug regenerated from translated title."
+      },
+      "tx_mainews_tag": {
+        "fields": [
+          "name"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records"
+      },
+      "tx_mairesource_download": {
+        "fields": [
+          "title",
+          "description"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "file",
+          "fe_groups",
+          "categories"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records",
+        "notes": "Binary PDF files themselves are translated/regenerated manually (see TranslationBacklog T-30)."
+      },
+      "sys_category": {
+        "fields": [
+          "title",
+          "description"
+        ],
+        "copy_fields": [
+          "pid",
+          "sorting",
+          "hidden",
+          "parent"
+        ],
+        "parent_field": "l10n_parent",
+        "uid_offset_key": "domain_records"
+      },
+      "tx_maimember_member": {
+        "fields": [
+          "position"
+        ],
+        "copy_fields": [
+          "pid",
+          "hidden",
+          "first_name",
+          "last_name",
+          "email",
+          "phone",
+          "status",
+          "join_date",
+          "image",
+          "fe_user",
+          "slug"
+        ],
+        "parent_field": "l10n_source",
+        "uid_offset_key": "domain_records",
+        "fal": [
+          {
+            "fieldname": "image",
+            "count_field": "image"
+          }
+        ],
+        "notes": "Names/contact are proper nouns (copy_fields). Translate position/role titles only."
+      }
+    },
+    "skip_tables": {
+      "tx_mailocations_location": "No WordPress source content yet.",
+      "tx_maitestimonials_testimonial": "No WordPress source content yet.",
+      "tx_maitimeline_entry": "No WordPress source content yet.",
+      "tx_maigallery_gallery": "No WordPress source content yet.",
+      "tx_maiteam_team_member": "No WordPress source content yet.",
+      "tx_maicanteen_menuplan": "No WordPress source content yet.",
+      "tx_maisurvey_survey": "No WordPress source content yet."
+    }
+  }
+}
