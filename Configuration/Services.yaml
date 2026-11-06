@@ -25,3 +25,21 @@ services:
   # build time.
   Maispace\MaiTranslate\Service\EmbeddingServiceInterface:
     factory: ['@Maispace\MaiTranslate\Service\EmbeddingServiceFactory', 'create']
+
+  dashboard.widget.maiTranslateManual:
+    class: 'ProudNerds\PnBackendManual\Widgets\ManualWidget'
+    arguments:
+      $options:
+        file: 'EXT:mai_translate/Resources/Private/Manual/Manual.md'
+        numbered: true
+        contentsDepth: 2
+        printButton: true
+    tags:
+      - name: dashboard.widget
+        identifier: 'maiTranslateManual'
+        groupNames: 'documentation'
+        title: 'Handbuch: Übersetzung'
+        description: 'Kurze Anleitung für DeepL, OpenAI und das Protokoll.'
+        iconIdentifier: 'content-book'
+        height: 'medium'
+        width: 'medium'
