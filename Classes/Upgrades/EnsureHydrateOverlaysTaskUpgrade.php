@@ -18,9 +18,9 @@ use TYPO3\CMS\Scheduler\Execution;
  * wird nur zur Minute 30 jeder vierten Stunde fällig. Leere oder unveränderte
  * Felder verbrauchen dabei keine Übersetzungszeichen.
  *
- * parameters und execution_details sind longtext. DataHandler würde die
- * Arrays wegen des TCA-Typs json wieder auseinandernehmen, deshalb schreibt
- * der Wizard die JSON-Strings direkt.
+ * parameters und execution_details sind im TCA json. Connection::insert
+ * kodiert Arrays genau einmal. Fertige JSON-Strings würden ein zweites Mal
+ * kodiert und der Planer könnte den Task nicht mehr laden.
  */
 #[UpgradeWizard('maiTranslateEnsureHydrateOverlaysTask')]
 final readonly class EnsureHydrateOverlaysTaskUpgrade implements UpgradeWizardInterface, RepeatableInterface
@@ -82,11 +82,8 @@ final readonly class EnsureHydrateOverlaysTaskUpgrade implements UpgradeWizardIn
                 'task_group' => 0,
                 'priority' => 100,
                 'description' => 'Übersetzungen und fehlende Bildreferenzen nachziehen',
-                'parameters' => json_encode(
-                    ['commandIdentifier' => self::COMMAND],
-                    JSON_THROW_ON_ERROR,
-                ),
-                'execution_details' => json_encode($execution->toArray(), JSON_THROW_ON_ERROR),
+                'parameters' => ['commandIdentifier' => self::COMMAND],
+                'execution_details' => $execution->toArray(),
                 'nextexecution' => $execution->getNextExecution(),
                 'lastexecution_time' => 0,
                 'lastexecution_context' => '',
